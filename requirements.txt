@@ -1,0 +1,15 @@
+altair
+pandas
+numpy
+scikit-learn
+streamlit
+plotly
+tqdm
+apyori
+lxml
+jieba
+pyxlsb
+xlsxwriter
+beautifulsoup4
+fastapi 
+uvicorn
