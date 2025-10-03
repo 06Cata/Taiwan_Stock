@@ -35,11 +35,11 @@ def get_industry(stock_id: str):
         "related_data": related
     }
 
-@app.get("/bs/all")
-def get_bs_all():
-    import json
-    json_string = df_bs.to_json(orient="records", force_ascii=False)
-    return json.loads(json_string)
+# @app.get("/bs/all")
+# def get_bs_all():
+#     import json
+#     json_string = df_bs.to_json(orient="records", force_ascii=False)
+#     return json.loads(json_string)
 
 @app.get("/bs/{stock_id}")
 def get_bs(stock_id: str):
@@ -54,11 +54,11 @@ def get_bs(stock_id: str):
     json_string = row.to_json(orient="records", force_ascii=False)
     return json.loads(json_string)
 
-@app.get("/ci/all")
-def get_ci_all():
-    import json
-    json_string = df_ci.to_json(orient="records", force_ascii=False)
-    return json.loads(json_string)
+# @app.get("/ci/all")
+# def get_ci_all():
+#     import json
+#     json_string = df_ci.to_json(orient="records", force_ascii=False)
+#     return json.loads(json_string)
 
 
 @app.get("/ci/{stock_id}")
@@ -75,11 +75,11 @@ def get_ci(stock_id: str):
     return json.loads(json_string)
 
 
-@app.get("/cfs/all")
-def get_cfs_all():
-    import json
-    json_string = df_cfs.to_json(orient="records", force_ascii=False)
-    return json.loads(json_string)
+# @app.get("/cfs/all")
+# def get_cfs_all():
+#     import json
+#     json_string = df_cfs.to_json(orient="records", force_ascii=False)
+#     return json.loads(json_string)
 
 @app.get("/cfs/{stock_id}")
 def get_cfs(stock_id: str):
