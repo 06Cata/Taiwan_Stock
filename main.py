@@ -4,7 +4,7 @@
 # uvicorn swagger.main:app --reload --port 8002
 
 from fastapi import FastAPI
-import gdown
+# import gdown
 import pandas as pd
 import requests
 import os
