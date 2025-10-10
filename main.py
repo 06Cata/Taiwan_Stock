@@ -1,38 +1,35 @@
-# lsof -i :8002
-# kill -9 PID
-# cd swagger
-# uvicorn swagger.main:app --reload --port 8002
-# uvicorn main:app --host 0.0.0.0 --port 8000
-
-from fastapi import FastAPI
-# import gdown
+from fastapi import FastAPI, HTTPException
 import pandas as pd
 import requests
 import os
-import json
 
-# def download_drive_file_gdown(file_id, dest_path):
-#     url = f"https://drive.google.com/uc?id={file_id}"
-#     gdown.download(url, dest_path, quiet=False)
+df_industry = None  # 一開始 None
+JSON_URL = 'https://raw.githubusercontent.com/06Cata/Taiwan_Stock/main/swagger/industry.json'
 
-# def load_df_from_drive_json(file_id, local_path, always_download=False):
-#     if always_download or not os.path.exists(local_path):
-#         print(f"下載 {file_id} ...")
-#         download_drive_file_gdown(file_id, local_path)
-#     return pd.read_json(local_path)
-
-# industry_id = "1zIk_CJaMNM9DszWnB82wUV4FIltHGygn"
-# bs_ci_cfs_id = "1wCqzSRRhN9iJQxaYRWhsrM0mziVjaeB_"
-# material_usunrate_id = "14XMLaPMVeZZVusG2Co1i_69LX35JmU0i"
-
-# 啟動時自動從 GitHub 下載
-df_industry = pd.read_json('https://raw.githubusercontent.com/06Cata/Taiwan_Stock/main/swagger/industry.json')
-df_material_usunrate = pd.read_json('https://raw.githubusercontent.com/06Cata/Taiwan_Stock/main/swagger/merged_material_unrated.json')
+def load_df():
+    global df_industry
+    try:
+        r = requests.get(JSON_URL, timeout=10)
+        r.raise_for_status()
+        df_industry = pd.read_json(r.content)
+    except Exception as e:
+        print(f"[load_df] Failed: {e}")
+        df_industry = None
 
 app = FastAPI()
 
+@app.on_event("startup")
+def startup_event():
+    load_df()
+
+@app.get("/health")
+def health():
+    return {"ok": df_industry is not None}
+
 @app.get("/industry/{stock_id}")
 def get_industry(stock_id: str):
+    if df_industry is None:
+        raise HTTPException(status_code=503, detail="資料尚未載入")
     sid = str(stock_id).strip()
     code_series = df_industry['公司代號'].astype(str).str.strip()
     row = df_industry[code_series == sid]
@@ -50,9 +47,7 @@ def get_industry(stock_id: str):
         "related_data": related
     }
 
-
-@app.get("/merged_material_usunrated")
-def get_material_usunrate():
-    json_string = df_material_usunrate.to_json(orient="records", force_ascii=False)
-    return json.loads(json_string)
-
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)
