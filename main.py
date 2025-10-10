@@ -1,3 +1,8 @@
+# lsof -i :8002
+# kill -9 PID
+# cd swagger
+# uvicorn swagger.main:app --reload --port 8002
+# uvicorn main:app --host 0.0.0.0 --port 8000
 from fastapi import FastAPI, HTTPException
 import pandas as pd
 import requests
