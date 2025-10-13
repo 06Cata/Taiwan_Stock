@@ -49,7 +49,6 @@ def get_industry(stock_id: str):
         "related_data": related
     }
     
-    
 @app.get("/company-info/{stock_id}")
 def get_company_info(stock_id: str):
     sid = str(stock_id).strip()
@@ -59,20 +58,23 @@ def get_company_info(stock_id: str):
         return {"error": "Not found"}
 
     # 主要欄位
-    stock_name = row.iloc[0].get('公司名稱', '')
+    stock_id = row.iloc[0].get('股票代號', '')
+    stock_name = row.iloc[0].get('公司簡稱', '')
+    cm_otc = row.iloc[0].get('上市櫃', '')
+    stock_cm_otc_date = row.iloc[0].get('上市櫃日期', '')
+    stock_industry = row.iloc[0].get('產業類別', '')
     stock_address = row.iloc[0].get('公司地址', '')
     stock_business = row.iloc[0].get('營業項目', '')
-    stock_cm_otc_date = row.iloc[0].get('上市櫃日期', '')
     stock_amount = row.iloc[0].get('資本額', '')
     stock_common_price = row.iloc[0].get('普通股每股面額', '')
     stock_amount_common = row.iloc[0].get('已發行普通股數', '')
     stock_amount_special = row.iloc[0].get('特別股股數', '')
-    stock_industry = row.iloc[0].get('產業類別', '')
+    
 
     # 同產業相關公司 (如果需要也可排除自己)
     related = (
         df_info[df_info['產業類別'] == stock_industry][
-            ['股票代號', '公司名稱', '公司地址', '營業項目', '上市櫃日期', '資本額', '普通股每股面額', '已發行普通股數', '特別股股數']
+            ['股票代號', '公司名稱', '上市櫃', '上市櫃日期', '產業類別', '公司地址', '營業項目', '資本額', '普通股每股面額', '已發行普通股數', '特別股股數']
         ]
         .astype(str)
         .to_dict('records')
@@ -81,13 +83,14 @@ def get_company_info(stock_id: str):
     return {
         "stock_id": sid,
         "stock_name": stock_name,
+        "cm_otc": cm_otc,
+        "stock_cm_otc_date": stock_cm_otc_date,
+        "stock_industry": stock_industry,
         "stock_address": stock_address,
         "stock_business": stock_business,
-        "stock_cm_otc_date": stock_cm_otc_date,
         "stock_amount": stock_amount,
         "stock_common_price": stock_common_price,
         "stock_amount_common": stock_amount_common,
         "stock_amount_special": stock_amount_special,
-        "stock_industry": stock_industry,
         "related_data": related
     }
