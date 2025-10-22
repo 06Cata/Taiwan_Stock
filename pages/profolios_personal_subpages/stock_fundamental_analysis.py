@@ -185,6 +185,7 @@ def _read_and_concat_sqlite_tables_monthly_eps_local():
         conn.close()
         dfs.append(df)
     df_monthly_eps = pd.concat(dfs, ignore_index=True)
+    df_monthly_eps = df_monthly_eps.sort_values(by=['股票代號', '季度排序'])
     if '年度-季度' in df_monthly_eps.columns:
         df_monthly_eps['年度-季度'] = df_monthly_eps['年度-季度'].astype(str)
     st.write('ok')
