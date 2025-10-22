@@ -4,7 +4,7 @@ from pages.profolios_personal_subpages.stock_material import (
     read_and_concat_sqlite_tables,
     read_merged_df_2,
     plotly_material,
-    unrated,
+    unrated
 )
 
 # ========== 1. CACHE 大資料：只抓一次，並設定 TTL（例如 6 小時） ==========
@@ -47,7 +47,7 @@ def analyze_data():
     try:
         st.markdown("#### ★ 失業率 vs S&P500（月資料）")
         fig_un = unrated(filtered_df)
-        st.plotly_chart(fig_un, key="fig_unrate_main")
+        st.plotly_chart(fig_un)
         st.divider()
     except Exception as e:
         pass
