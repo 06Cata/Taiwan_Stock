@@ -47,7 +47,7 @@ def analyze_data():
     try:
         st.markdown("#### ★ 失業率 vs S&P500（月資料）")
         fig_un = unrated(filtered_df)
-        st.plotly_chart(fig_un)
+        st.plotly_chart(fig_un, key="fig_unrate_main")
         st.divider()
     except Exception as e:
         pass
