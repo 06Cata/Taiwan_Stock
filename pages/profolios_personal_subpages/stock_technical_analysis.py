@@ -23,7 +23,7 @@ import streamlit as st
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import plotly.express as px
-from backtesting import Backtest, Strategy
+# from backtesting import Backtest, Strategy
 from scipy.optimize import curve_fit
 from scipy.stats import linregress
 import vectorbt as vbt
