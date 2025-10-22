@@ -17,7 +17,7 @@ import random
 import sqlite3
 import unicodedata
 import json
-import yfinance as yf
+# import yfinance as yf
 import tempfile
 import streamlit as st
 import plotly.figure_factory as ff
