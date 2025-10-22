@@ -110,6 +110,7 @@ def _read_and_concat_sqlite_tables_tech():
         progress_bar.progress(idx / total, text=f"已下載第 {idx} 份，共 {total} 份")
     progress_bar.empty()  # 下載結束移除進度條
     df_concat = pd.concat(dfs, ignore_index=True)
+    df_concat['Date'] = pd.to_datetime(df_concat['Date'], errors='coerce')
     st.write('ok')
     return df_concat
 
@@ -143,6 +144,7 @@ def _read_and_concat_sqlite_tables_tech_local():
         dfs.append(df)
     df_concat = pd.concat(dfs, ignore_index=True)
     df_concat['Date'] = pd.to_datetime(df_concat['Date'], errors='coerce')
+    st.write('ok')
     return df_concat
 
 
