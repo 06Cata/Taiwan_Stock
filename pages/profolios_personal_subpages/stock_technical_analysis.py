@@ -16,14 +16,14 @@ import random
 import sqlite3
 import unicodedata
 import json
-# import yfinance as yf
+import yfinance as yf
 import tempfile
 import streamlit as st
 
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import plotly.express as px
-# from backtesting import Backtest, Strategy
+from backtesting import Backtest, Strategy
 from scipy.optimize import curve_fit
 from scipy.stats import linregress
 import vectorbt as vbt
@@ -1880,7 +1880,14 @@ def plotly_bollinger_ma(daily_df_merge_index_pepb_selected_date_with_ma, stock_i
         title=f"{stock_industry} {stock_id} {stock_name} 布林通道+均線突破策略",
         xaxis_title="Date", yaxis_title="股價",
         width=900, height=400,
-        legend=dict(font=dict(size=12))
+        legend=dict(
+        orientation='h',
+        yanchor='top',
+        y=-0.25,         # 建議從 -0.10 ~ -0.18 之間測試，找到最適合你畫面的值
+        xanchor='center',
+        x=0.5,
+        font=dict(size=13)   # 如覺得字太大可再調小
+        )
     )
 
     return fig
@@ -1964,7 +1971,15 @@ def plotly_tec_atr(daily_df_merge_index_pepb_selected_date_with_ma, stock_indust
         xaxis_title='Date',
         yaxis=dict(title='ATR值', side='left'),
         yaxis2=dict(title='收盤價', overlaying='y', side='right'),  # 右側
-        width=900, height=400
+        width=900, height=400,
+        legend=dict(
+        orientation='h',
+        yanchor='top',
+        y=-0.25,         # 建議從 -0.10 ~ -0.18 之間測試，找到最適合你畫面的值
+        xanchor='center',
+        x=0.5,
+        font=dict(size=13)   # 如覺得字太大可再調小
+        )
     )
 
     # ATR 百分比（波動率%）圖
@@ -1996,7 +2011,15 @@ def plotly_tec_atr(daily_df_merge_index_pepb_selected_date_with_ma, stock_indust
         xaxis_title='Date',
         yaxis_title='ATR波動率(%)',
         yaxis_tickformat='.2%',
-        width=900, height=400
+        width=900, height=400,
+        legend=dict(
+        orientation='h',
+        yanchor='top',
+        y=-0.25,         # 建議從 -0.10 ~ -0.18 之間測試，找到最適合你畫面的值
+        xanchor='center',
+        x=0.5,
+        font=dict(size=13)   # 如覺得字太大可再調小
+        )
     )
 
     return fig, fig2
@@ -2065,7 +2088,15 @@ def bia(daily_df_merge_index_pepb_selected_date_with_ma, stock_industry, stock_n
         xaxis_title='日期',
         yaxis=dict(title='乖離率 (%)', side='left'),
         yaxis2=dict(title='收盤價', overlaying='y', side='right'),
-        width=900, height=400
+        width=900, height=400,
+        legend=dict(
+        orientation='h',
+        yanchor='top',
+        y=-0.25,         # 建議從 -0.10 ~ -0.18 之間測試，找到最適合你畫面的值
+        xanchor='center',
+        x=0.5,
+        font=dict(size=13)   # 如覺得字太大可再調小
+        )
     )
 
     return fig
