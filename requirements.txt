@@ -13,3 +13,4 @@ xlsxwriter
 beautifulsoup4
 fastapi 
 uvicorn
+vectorbt
