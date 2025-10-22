@@ -221,12 +221,23 @@ def _read_and_concat_sqlite_tables_monthly_eps():
 
 
 def _read_and_concat_sqlite_tables_value_local():
+    # paths = [
+    #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_value_1.sqlite3",
+    #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_value_2.sqlite3",
+    #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_value_3.sqlite3",
+    #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_value_4.sqlite3",
+    # ]
+    
+    # 取得專案根目錄
+    ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # 定義相對於專案根目錄的路徑
     paths = [
-        "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_value_1.sqlite3",
-        "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_value_2.sqlite3",
-        "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_value_3.sqlite3",
-        "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_value_4.sqlite3",
+        os.path.join(ROOT, "merged_etf_index_pepb_value_1.sqlite3"),
+        os.path.join(ROOT, "merged_etf_index_pepb_value_2.sqlite3"),
+        os.path.join(ROOT, "merged_etf_index_pepb_value_3.sqlite3"),
+        os.path.join(ROOT, "merged_etf_index_pepb_value_4.sqlite3"),
     ]
+    
     table_names = [
         "merged_etf_index_pepb_value_1",
         "merged_etf_index_pepb_value_2",
@@ -244,9 +255,17 @@ def _read_and_concat_sqlite_tables_value_local():
 
 
 def _read_and_concat_sqlite_tables_monthly_eps_local():
+    # paths = [
+    #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_monthly_eps.sqlite3",
+    # ]
+    
+    # 取得專案根目錄
+    ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # 定義相對於專案根目錄的路徑
     paths = [
-        "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_monthly_eps.sqlite3",
+        os.path.join(ROOT, "merged_monthly_eps.sqlite3"),
     ]
+    
     table_names = [
         "merged_monthly_eps",
     ]

@@ -52,6 +52,7 @@ def _read_and_concat_sqlite_tables_material():
     urls = [
         "https://github.com/06Cata/Taiwan_Stock/blob/main/merged_material_unrated.sqlite3",
     ]
+    
     table_names = [
         "merged_material_unrated",
     ]
@@ -74,9 +75,17 @@ def _read_and_concat_sqlite_tables_material():
 
 
 def _read_and_concat_sqlite_tables_material_local():
+    # paths = [
+    #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_material_unrated.sqlite3"
+    # ]
+    
+    # 取得專案根目錄
+    ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # 定義相對於專案根目錄的路徑
     paths = [
-        "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_material_unrated.sqlite3"
+        os.path.join(ROOT, "merged_material_unrated.sqlite3"),
     ]
+    
     table_names = [
         "merged_material_unrated"
     ]

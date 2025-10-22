@@ -115,11 +115,21 @@ def _read_and_concat_sqlite_tables_tech():
 
 
 def _read_and_concat_sqlite_tables_tech_local():
+    # paths = [
+    #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_1.sqlite3",
+    #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_2.sqlite3",
+    #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_3.sqlite3"
+    # ]
+    
+    # 取得專案根目錄
+    ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # 定義相對於專案根目錄的路徑
     paths = [
-        "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_1.sqlite3",
-        "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_2.sqlite3",
-        "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_3.sqlite3"
+        os.path.join(ROOT, "merged_etf_index_pepb_1.sqlite3"),
+        os.path.join(ROOT, "merged_etf_index_pepb_2.sqlite3"),
+        os.path.join(ROOT, "merged_etf_index_pepb_3.sqlite3"),
     ]
+    
     table_names = [
         "merged_etf_index_pepb_1",
         "merged_etf_index_pepb_2",

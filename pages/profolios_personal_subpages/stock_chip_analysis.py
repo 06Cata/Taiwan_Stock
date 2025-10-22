@@ -117,6 +117,7 @@ def _read_and_concat_sqlite_tables_chip_local():
     #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_chip_2.sqlite3",
     #     "/Users/catalinakuo/Downloads/for_git/Taiwan_Stock/merged_etf_index_pepb_chip_3.sqlite3"
     # ]
+    
     # 取得專案根目錄
     ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     # 定義相對於專案根目錄的路徑
@@ -125,6 +126,7 @@ def _read_and_concat_sqlite_tables_chip_local():
         os.path.join(ROOT, "merged_etf_index_pepb_chip_2.sqlite3"),
         os.path.join(ROOT, "merged_etf_index_pepb_chip_3.sqlite3"),
     ]
+    
     table_names = [
         "merged_etf_index_pepb_chip_1",
         "merged_etf_index_pepb_chip_2",
