@@ -184,9 +184,11 @@ def _read_and_concat_sqlite_tables_monthly_eps_local():
         df = pd.read_sql(f"SELECT * FROM [{table_name}]", conn)
         conn.close()
         dfs.append(df)
-    df_concat = pd.concat(dfs, ignore_index=True)
+    df_monthly_eps = pd.concat(dfs, ignore_index=True)
+    if '年度-季度' in df_monthly_eps.columns:
+        df_monthly_eps['年度-季度'] = df_monthly_eps['年度-季度'].astype(str)
     st.write('ok')
-    return df_concat
+    return df_monthly_eps
 
 
 
