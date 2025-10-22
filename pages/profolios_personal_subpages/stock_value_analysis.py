@@ -217,6 +217,9 @@ def _read_and_concat_sqlite_tables_monthly_eps():
         progress_bar.progress(idx / total, text=f"已下載第 {idx} 份，共 {total} 份")
     progress_bar.empty()  # 下載結束移除進度條
     df_monthly_eps = pd.concat(dfs, ignore_index=True)
+    df_monthly_eps = df_monthly_eps.sort_values(by=['股票代號', '季度排序'])
+    if '年度-季度' in df_monthly_eps.columns:
+        df_monthly_eps['年度-季度'] = df_monthly_eps['年度-季度'].astype(str)
     st.write('ok')
     return df_monthly_eps
 
