@@ -139,6 +139,8 @@ def _read_and_concat_sqlite_tables_chip_local():
         conn.close()
         dfs.append(df)
     df_concat = pd.concat(dfs, ignore_index=True)
+    df_concat['Date'] = pd.to_datetime(df_concat['Date'], errors='coerce')
+
     return df_concat
 
 
