@@ -2,13 +2,27 @@ import streamlit as st
 import pandas as pd 
 import numpy as np 
 import plotly.express as px 
-try:
-    from pages.profolios_personal_subpages import 台股模型預測_TWStockForecast, 台股產業類別查詢_TWIndustryLookup, 台股指標篩選_TWFundamentalScreener,\
-        台股基本面財報分析_TWFinancialAnalysis, 台股基本面價值分析_TWValueAnalysis, 台股技術面分析_TWTechnicalAnalysis, 台股籌碼面分析_TWChipAnalysis,\
-        國際商品與指數參照_GlobalCommodityIndex, 美股模型預測_USStockForecast, AI智能分析_AIInsight,\
-        _為什麼要投資_WhyInvest, _複利計算機_CompoundCalc, _買賣交易計算機_BuySellCalc  
-except ModuleNotFoundError as e:
-    st.error(f"Error importing modules: {e}")
+# try:
+#     from pages.profolios_personal_subpages import 台股模型預測_TWStockForecast, 台股產業類別查詢_TWIndustryLookup, 台股指標篩選_TWFundamentalScreener,\
+#         台股基本面財報分析_TWFinancialAnalysis, 台股基本面價值分析_TWValueAnalysis, 台股技術面分析_TWTechnicalAnalysis, 台股籌碼面分析_TWChipAnalysis,\
+#         國際商品與指數參照_GlobalCommodityIndex, 美股模型預測_USStockForecast, AI智能分析_AIInsight,\
+#         _為什麼要投資_WhyInvest, _複利計算機_CompoundCalc, _買賣交易計算機_BuySellCalc  
+# except ModuleNotFoundError as e:
+#     st.error(f"Error importing modules: {e}")
+
+from pages.profolios_personal_subpages import 台股模型預測_TWStockForecast
+from pages.profolios_personal_subpages import 台股產業類別查詢_TWIndustryLookup
+from pages.profolios_personal_subpages import 台股指標篩選_TWFundamentalScreener
+from pages.profolios_personal_subpages import 台股基本面財報分析_TWFinancialAnalysis
+from pages.profolios_personal_subpages import 台股基本面價值分析_TWValueAnalysis
+from pages.profolios_personal_subpages import 台股技術面分析_TWTechnicalAnalysis
+from pages.profolios_personal_subpages import 台股籌碼面分析_TWChipAnalysis
+from pages.profolios_personal_subpages import 國際商品與指數參照_GlobalCommodityIndex
+from pages.profolios_personal_subpages import 美股模型預測_USStockForecast
+from pages.profolios_personal_subpages import AI智能分析_AIInsight
+from pages.profolios_personal_subpages import _為什麼要投資_WhyInvest
+from pages.profolios_personal_subpages import _複利計算機_CompoundCalc
+from pages.profolios_personal_subpages import _買賣交易計算機_BuySellCalc
 
 
 def main():
