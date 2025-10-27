@@ -4445,7 +4445,8 @@ def plotly_eps_monthly(df_monthly_eps, stock_industry, stock_id, stock_name):
     # === 4. table
     table_data = (
         df_stock[['年度-季度', '標準基本每股盈餘']]
-        .dropna()
+        .dropna()        
+        .tail(16) 
         .set_index('年度-季度').T
     )
     table = ff.create_table(table_data.round(2), height_constant=30)
@@ -4522,7 +4523,6 @@ def plotly_eps_monthly(df_monthly_eps, stock_industry, stock_id, stock_name):
         x=0.5
         )
     )
-        
 
     # 圖3：近四季平均EPS vs 同業
     fig3 = go.Figure()
