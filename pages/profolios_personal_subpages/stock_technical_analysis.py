@@ -1528,6 +1528,24 @@ def plotly_tec_macd_vectorbt(daily_df_merge_index_pepb_selected_date_with_ma, st
             mode='lines', line=dict(color='pink', width=1.2), name='J9',
             yaxis='y2'
         ))
+    # === 紅綠柱 ===
+    osc_pos = df['OSC'].where(df['OSC'] >= 0, 0)
+    osc_neg = df['OSC'].where(df['OSC'] < 0, 0)
+
+    fig.add_trace(go.Bar(
+        x=df['Date'],  # ✅ 改這裡
+        y=osc_pos,
+        name='OSC 正值',
+        marker_color='indianred',
+        yaxis='y2'
+    ))
+    fig.add_trace(go.Bar(
+        x=df['Date'],  # ✅ 改這裡
+        y=osc_neg,
+        name='OSC 負值',
+        marker_color='limegreen',
+        yaxis='y2'
+    ))
     
     y_range = [df['Close'].min(), df['Close'].max()]
     macd_min = min(df['DIF'].min(), df['MACD'].min(), df['J9'].min())
