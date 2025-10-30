@@ -9,7 +9,6 @@ import plotly.express as px
 #         _為什麼要投資_WhyInvest, _複利計算機_CompoundCalc, _買賣交易計算機_BuySellCalc  
 # except ModuleNotFoundError as e:
 #     st.error(f"Error importing modules: {e}")
-
 from pages.profolios_personal_subpages import 台股模型預測_TWStockForecast
 from pages.profolios_personal_subpages import 台股產業類別查詢_TWIndustryLookup
 from pages.profolios_personal_subpages import 台股指標篩選_TWFundamentalScreener
@@ -18,8 +17,9 @@ from pages.profolios_personal_subpages import 台股基本面價值分析_TWValu
 from pages.profolios_personal_subpages import 台股技術面分析_TWTechnicalAnalysis
 from pages.profolios_personal_subpages import 台股籌碼面分析_TWChipAnalysis
 from pages.profolios_personal_subpages import 國際商品與指數參照_GlobalCommodityIndex
-from pages.profolios_personal_subpages import 美股模型預測_USStockForecast
-from pages.profolios_personal_subpages import AI智能分析_AIInsight
+# from pages.profolios_personal_subpages import 美股模型預測_USStockForecast
+from pages.profolios_personal_subpages import 美股AI智能分析_USStock_AIInsight
+from pages.profolios_personal_subpages import 財報AI智能分析_StockPDF_AIInsight
 from pages.profolios_personal_subpages import _為什麼要投資_WhyInvest
 from pages.profolios_personal_subpages import _複利計算機_CompoundCalc
 from pages.profolios_personal_subpages import _買賣交易計算機_BuySellCalc
@@ -52,8 +52,9 @@ def main():
                                                 "台股技術面分析_TWTechnicalAnalysis",  
                                                 "台股籌碼面分析_TWChipAnalysis",
                                                 "國際商品與指數參照_GlobalCommodityIndex", 
-                                                "美股模型預測_USStockForecast",
-                                                "AI智能分析_AIInsight",  
+                                                # "美股模型預測_USStockForecast",
+                                                "美股AI智能分析_USStock_AIInsight",  
+                                                "財報AI智能分析_StockPDF_AIInsight",
                                                 "_為什麼要投資_WhyInvest", 
                                                 "_複利計算機_CompoundCalc",
                                                 "_買賣交易計算機_BuySellCalc"]) 
@@ -82,11 +83,14 @@ def main():
     elif page_selection == "國際商品與指數參照_GlobalCommodityIndex":
         國際商品與指數參照_GlobalCommodityIndex.main()
         
-    elif page_selection == "美股模型預測_USStockForecast":
-        美股模型預測_USStockForecast.main()
+    # elif page_selection == "美股模型預測_USStockForecast":
+    #     美股模型預測_USStockForecast.main()
         
-    elif page_selection == "AI智能分析_AIInsight":
-        AI智能分析_AIInsight.main()
+    elif page_selection == "美股AI智能分析_USStock_AIInsight":
+        美股AI智能分析_USStock_AIInsight.main()
+        
+    elif page_selection == "財報AI智能分析_StockPDF_AIInsight":
+        財報AI智能分析_StockPDF_AIInsight.main()
     
     elif page_selection == "_為什麼要投資_WhyInvest":
         _為什麼要投資_WhyInvest.main()
@@ -98,7 +102,6 @@ def main():
         _買賣交易計算機_BuySellCalc.main()
         
     
-        
 
 
 #%%
