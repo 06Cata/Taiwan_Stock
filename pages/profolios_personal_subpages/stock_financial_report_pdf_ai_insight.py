@@ -1,33 +1,3 @@
-#%%
-# import google.generativeai as genai
-# print(genai.__version__)
-
-# %%
-# import pdfplumber
-
-# pdf_path = f"/Users/catalinakuo/Desktop/202502_2330_AI1_20251030_230957.pdf"
-# with pdfplumber.open(pdf_path) as pdf:
-#     text = ""
-#     max_pages = 3
-#     for i, page in enumerate(pdf.pages[:max_pages], 1):
-#         page_text = page.extract_text() or ""
-#         print(f"[PAGE {i}]")
-#         print(page_text[:1000])
-#         text += page_text + "\n"
-# print("=== 合併文字長度：", len(text))
-
-
-# %%
-# import google.generativeai as genai
-
-# api_key = "AIzaSyDqasOgFtgOAYY3AQysAnmxdaQWkOxjSdw"
-# genai.configure(api_key=api_key)
-
-# models = genai.list_models()
-# for m in models:
-#     print(m.name)
-
-
 import os
 import re
 import pdfplumber
