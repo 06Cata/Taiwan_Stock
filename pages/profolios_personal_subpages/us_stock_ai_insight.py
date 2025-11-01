@@ -1,3 +1,5 @@
+# us_stock_ai_insight.py
+
 import streamlit as st
 import os
 import requests
@@ -10,40 +12,50 @@ from plotly.subplots import make_subplots
 
 
 # ==================== FMP quarterly ====================
-#%%
-# ==================== FMP get_balance_ratios ====================
+#%% 
 @st.cache_data(ttl=3600)
 def get_balance_ratios(symbol, api_key):
     url = f"https://financialmodelingprep.com/stable/balance-sheet-statement?symbol={symbol}&apikey={api_key}"
     r = requests.get(url)
     data = r.json()
     df = pd.DataFrame(data)
-    df = df.sort_values("date", ascending=True).reset_index(drop=True)
+    
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date", ascending=False).reset_index(drop=True)
+    
+    for c in ["totalAssets","totalLiabilities","totalStockholdersEquity",
+              "totalCurrentAssets","totalCurrentLiabilities","netDebt",
+              "cashAndShortTermInvestments","netReceivables",
+              "totalDebt","shortTermDebt","longTermDebt", "retainedEarnings"]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    # 基本比率計算
+    # 比率
     # 流動比 / 速動比 / 現金比
     # 資產 / 負債 / 權益 
     # 負債比 / 權益比 / 淨負債比
     df["current_ratio"] = df["totalCurrentAssets"] / df["totalCurrentLiabilities"]
-    df["quick_ratio"] = (df["cashAndShortTermInvestments"] + df["netReceivables"]) / df["totalCurrentLiabilities"]
-    df["debt_ratio"] = df["totalLiabilities"] / df["totalAssets"]
-    df["equity_ratio"] = df["totalStockholdersEquity"] / df["totalAssets"]
+    df["quick_ratio"]   = (df["cashAndShortTermInvestments"] + df["netReceivables"]) / df["totalCurrentLiabilities"]
+    df["debt_ratio"]    = df["totalLiabilities"] / df["totalAssets"]
+    df["equity_ratio"]  = df["totalStockholdersEquity"] / df["totalAssets"]
     df["debt_to_equity"] = df["totalLiabilities"] / df["totalStockholdersEquity"]
     df["net_debt_ratio"] = df["netDebt"] / df["totalAssets"]
-    df["cash_ratio"] = df["cashAndShortTermInvestments"] / df["totalCurrentLiabilities"]
+    df["cash_ratio"]   = df["cashAndShortTermInvestments"] / df["totalCurrentLiabilities"]
+    df["longTermDebt"] = df["longTermDebt"]
 
+    #
     cols_to_keep = [
-        "date", "symbol", "totalAssets", "totalLiabilities", "totalStockholdersEquity",
-        "totalCurrentAssets", "totalCurrentLiabilities", "netDebt",
-        "current_ratio", "quick_ratio", "debt_ratio", "equity_ratio",
-        "debt_to_equity", "net_debt_ratio", "cash_ratio"
+        "date","symbol",
+        "totalAssets","totalLiabilities","totalStockholdersEquity",
+        "totalCurrentAssets","totalCurrentLiabilities","netDebt",
+        "cashAndShortTermInvestments","netReceivables",
+        "totalDebt","shortTermDebt","longTermDebt_inferred",
+        "current_ratio","quick_ratio","debt_ratio","equity_ratio",
+        "debt_to_equity","net_debt_ratio","cash_ratio", "longTermDebt","retainedEarnings"
     ]
-    df = df[cols_to_keep]
-
-    # 格式化
-    df = df.round(3)
-    
+    df = df[[c for c in cols_to_keep if c in df.columns]].round(3)
     return df
+
 
 
 #%%
@@ -65,11 +77,9 @@ def get_income_ratios(symbol, api_key):
     df = pd.DataFrame(data)
     if df.empty:
         return df
-
-    # 時間序
-    if "date" in df.columns:
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values("date").reset_index(drop=True)
+    
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date", ascending=False).reset_index(drop=True)
 
     # 確保欄位存在，缺的補 NaN 以避免 KeyError
     need = [
@@ -148,9 +158,7 @@ def get_cashflow_ratios(symbol, api_key):
     - 營運資金變動、SBC、折舊攤銷
     回傳按 date 遞增的 DataFrame。
     """
-    import numpy as np
-    import pandas as pd
-    import requests
+
 
     url = f"https://financialmodelingprep.com/stable/cash-flow-statement?symbol={symbol}&apikey={api_key}"
     r = requests.get(url, timeout=10)
@@ -160,10 +168,8 @@ def get_cashflow_ratios(symbol, api_key):
     if df.empty:
         return df
 
-    # 排序
-    if "date" in df.columns:
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values("date").reset_index(drop=True)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date", ascending=False).reset_index(drop=True)
 
     # 安全欄位（缺就補 NaN）
     need = [
@@ -229,8 +235,6 @@ def compute_core_cross_metrics_from_frames(
     bal: pd.DataFrame, 
     cfs: pd.DataFrame
 ) -> pd.DataFrame:
-    import numpy as np
-    import pandas as pd
 
     if any(df is None or df.empty for df in [inc, bal, cfs]):
         return pd.DataFrame()
@@ -259,6 +263,11 @@ def compute_core_cross_metrics_from_frames(
     if df.empty:
         return df
 
+    if "netIncomeFromContinuingOperations" in df.columns and df["netIncomeFromContinuingOperations"].notna().any():
+        df["netIncome_used"] = df["netIncomeFromContinuingOperations"].combine_first(df["netIncome"])
+    else:
+        df["netIncome_used"] = df["netIncome"]
+        
     # 日期統一（可以選用 balance sheet 日期）
     df["date"] = df["date_bs"]
 
@@ -279,12 +288,12 @@ def compute_core_cross_metrics_from_frames(
     # df["ROA"] = df["netIncome"] / df["avg_assets"] * 100
 
     df = df.sort_values("date")   
-    df["ROE"] = df["netIncome"] / df["totalStockholdersEquity"] * 100
-    df["ROA"] = df["netIncome"] / df["totalAssets"] * 100
+    df["ROE"] = df["netIncome_used"] / df["totalStockholdersEquity"] * 100
+    df["ROA"] = df["netIncome_used"] / df["totalAssets"] * 100
     
     
     df["asset_turnover"] = _safe_div(df["revenue"], df["totalAssets"])
-    df["cash_conversion"] = _safe_div(df["OCF"], df["netIncome"])
+    df["cash_conversion"] = _safe_div(df["OCF"], df["netIncome_used"])
     df["fcf_margin"] = _safe_div(df["FCF"], df["revenue"])
     df["capex_to_ocf"] = _safe_div(-df["CapEx"], df["OCF"])
     df["payout_to_ocf"] = _safe_div(df["Dividends"] + df["Buybacks"], df["OCF"])
@@ -305,6 +314,7 @@ def compute_core_cross_metrics_from_frames(
     out = df[keep].copy()
 
     return out
+
 
 #%%
 # ==================== others ====================
@@ -402,8 +412,7 @@ def get_stock_data(symbol, api_key):
     
 
 #%%
-# ==================== 四階段財報分析計算（精簡版） ====================
-
+# ==================== 四階段財報分析計算 ====================
 def safe_divide(numerator, denominator, default=0):
     try:
         numerator = float(numerator) if not pd.isna(numerator) else 0
@@ -414,48 +423,64 @@ def safe_divide(numerator, denominator, default=0):
     except:
         return default
 
-def calculate_piotroski_fscore(df_income, df_balance, df_cash):
+
+def calculate_piotroski_fscore(df_income: pd.DataFrame,
+                               df_balance: pd.DataFrame,
+                               df_cash: pd.DataFrame):
+
+    # --- 基本檢查 ---
+    if any(x is None or x.empty for x in (df_income, df_balance, df_cash)):
+        return None
     if len(df_income) < 2 or len(df_balance) < 2 or len(df_cash) < 2:
         return None
 
-    # 按日期降序排列，確保 index=0 是最新
+    # --- 時序：取「最近期」與「前一期」 ---
     df_income = df_income.sort_values('date', ascending=False).reset_index(drop=True)
     df_balance = df_balance.sort_values('date', ascending=False).reset_index(drop=True)
     df_cash = df_cash.sort_values('date', ascending=False).reset_index(drop=True)
 
-    # 最新/前期資料
     ci, pi = df_income.iloc[0], df_income.iloc[1]
     cb, pb = df_balance.iloc[0], df_balance.iloc[1]
     cc, pc = df_cash.iloc[0], df_cash.iloc[1]
 
-    # 指標計算（每一項都取「當前」和「前期」）
-    roa_now = safe_divide(ci['netIncome'], cb['totalAssets'])
-    roa_prev = safe_divide(pi['netIncome'], pb['totalAssets'])
+    # --- 直接用 longTermDebt 欄位 ---
+    ltd_now = cb.get('longTermDebt', np.nan)
+    ltd_prev = pb.get('longTermDebt', np.nan)
+
+    # --- 指標計算 ---
+    roa_now = safe_divide(ci.get('netIncome', 0), cb.get('totalAssets', 1))
+    roa_prev = safe_divide(pi.get('netIncome', 0), pb.get('totalAssets', 1))
+    roa_precentage = roa_now - roa_prev
+    
     ocf_now = cc.get('OCF', 0)
     ocf_prev = pc.get('OCF', 0)
     net_income_now = ci.get('netIncome', 0)
     net_income_prev = pi.get('netIncome', 0)
 
-    ltd_now = cb.get('longTermDebt', 0)
-    ltd_prev = pb.get('longTermDebt', 0)
     ca_now = cb.get('totalCurrentAssets', 0)
     ca_prev = pb.get('totalCurrentAssets', 0)
     cl_now = cb.get('totalCurrentLiabilities', 1)
     cl_prev = pb.get('totalCurrentLiabilities', 1)
     cr_now = safe_divide(ca_now, cl_now)
     cr_prev = safe_divide(ca_prev, cl_prev)
-    shares_now = ci.get('weightedAverageShsOut', 0)
-    shares_prev = pi.get('weightedAverageShsOut', 0)
 
+    ltd_now_ratio = safe_divide(ltd_now, cb.get('totalAssets', 1))
+    ltd_prev_ratio = safe_divide(ltd_prev, pb.get('totalAssets', 1))
+
+    # 股份（優先 Diluted）
+    shares_now = ci.get('weightedAverageShsOutDil', ci.get('weightedAverageShsOut', 0))
+    shares_prev = pi.get('weightedAverageShsOutDil', pi.get('weightedAverageShsOut', 0))
+
+    # 營運效率
     gpm_now = safe_divide(ci.get('grossProfit', 0), ci.get('revenue', 1))
     gpm_prev = safe_divide(pi.get('grossProfit', 0), pi.get('revenue', 1))
     ato_now = safe_divide(ci.get('revenue', 0), cb.get('totalAssets', 1))
     ato_prev = safe_divide(pi.get('revenue', 0), pb.get('totalAssets', 1))
 
-    # 組裝回傳
+    # --- 組裝回傳（含打勾打叉與分數） ---
     score = dict(profitability=[], leverage=[], efficiency=[], total_score=0)
 
-    # 獲利能力指標
+    # 1) 獲利能力（4項）
     score['profitability'] = [
         {
             'name': 'ROA正值',
@@ -474,29 +499,27 @@ def calculate_piotroski_fscore(df_income, df_balance, df_cash):
         {
             'name': 'ROA年增',
             'score': int(roa_now > roa_prev),
-            'current': f"{roa_now:.4f}",
-            'previous': f"{roa_prev:.4f}",
+            'current': f"{roa_precentage:.4f}",
+            'previous': f"-",
             'status': '✓' if roa_now > roa_prev else '✗'
         },
         {
-            'name': '現金流品質',
+            'name': '現金流品質（OCF - 淨利）',
             'score': int(ocf_now > net_income_now),
-            'current': f"${ocf_now:,.0f}",
-            'previous': f"${net_income_now:,.0f}",  # 這裡「前期」其實比較合理寫 ocf_prev vs net_income_prev
+            'current': f"${ocf_now-net_income_now:,.0f}",
+            'previous': f"${ocf_prev-net_income_prev:,.0f}",
             'status': '✓' if ocf_now > net_income_now else '✗'
         },
     ]
 
-    # 槓桿與流動性
-    ltd_now_ratio = safe_divide(ltd_now, cb.get('totalAssets', 1))
-    ltd_prev_ratio = safe_divide(ltd_prev, pb.get('totalAssets', 1))
+    # 2) 槓桿與流動性（3項）
     score['leverage'] = [
         {
             'name': '長期負債比率改善',
             'score': int(ltd_now_ratio < ltd_prev_ratio),
-            'current': f"{ltd_now_ratio:.4f}",
-            'previous': f"{ltd_prev_ratio:.4f}",
-            'status': '✓' if ltd_now_ratio < ltd_prev_ratio else '✗'
+            'current': f"{(0.0 if np.isnan(ltd_now_ratio) else ltd_now_ratio):.4f}",
+            'previous': f"{(0.0 if np.isnan(ltd_prev_ratio) else ltd_prev_ratio):.4f}",
+            'status': '✓' if (not np.isnan(ltd_now_ratio) and not np.isnan(ltd_prev_ratio) and (ltd_now_ratio < ltd_prev_ratio)) else '✗'
         },
         {
             'name': '流動比率改善',
@@ -514,7 +537,7 @@ def calculate_piotroski_fscore(df_income, df_balance, df_cash):
         },
     ]
 
-    # 營運效率
+    # 3) 營運效率（2項）
     score['efficiency'] = [
         {
             'name': '毛利率改善',
@@ -532,13 +555,24 @@ def calculate_piotroski_fscore(df_income, df_balance, df_cash):
         },
     ]
 
-    score['total_score'] = sum(i['score'] for group in (score['profitability'], score['leverage'], score['efficiency']) for i in group)
+    # 總分
+    score['total_score'] = sum(
+        item['score']
+        for group in (score['profitability'], score['leverage'], score['efficiency'])
+        for item in group
+    )
+
     return score
 
 
 def calculate_altman_zscore(df_income, df_balance, market_cap):
+    
+    df_income = df_income.sort_values("date", ascending=False).reset_index(drop=True)
+    df_balance = df_balance.sort_values("date", ascending=False).reset_index(drop=True)
+
     if df_income.empty or df_balance.empty or market_cap is None:
         return None
+    
     ci = df_income.iloc[0]; cb = df_balance.iloc[0]
     ca = cb.get('totalCurrentAssets', 0)
     cl = cb.get('totalCurrentLiabilities', 0)
@@ -550,32 +584,59 @@ def calculate_altman_zscore(df_income, df_balance, market_cap):
     rev = ci.get('revenue', 0)
     wc = ca - cl
     ebit = oi + ie
+
+    # DEBUG: 輸出所有來源數字
+    print("="*40)
+    print(f"【DEBUG Altman Z-Score】")
+    print(f"CA (Current Assets):       {ca:,}")
+    print(f"CL (Current Liabilities):  {cl:,}")
+    print(f"TA (Total Assets):         {ta:,}")
+    print(f"RE (Retained Earnings):    {re:,}")
+    print(f"OI (Operating Income):     {oi:,}")
+    print(f"IE (Interest Expense):     {ie:,}")
+    print(f"TL (Total Liabilities):    {tl:,}")
+    print(f"REV (Revenue):             {rev:,}")
+    print(f"WC (Working Capital):      {wc:,}")
+    print(f"EBIT:                      {ebit:,}")
+    print(f"Market Cap:                {market_cap:,}")
+    print("="*40)
+    # 再來正常算你的組成比率
     A = safe_divide(wc, ta) * 1.2
     B = safe_divide(re, ta) * 1.4
     C = safe_divide(ebit, ta) * 3.3
     D = safe_divide(market_cap, tl) * 0.6
     E = safe_divide(rev, ta) * 1.0
     z_score = A+B+C+D+E
+    
     risk_level = "安全區域" if z_score > 2.99 else ("灰色區域" if z_score >= 1.81 else "危險區域")
     risk_emoji = "😊" if z_score > 2.99 else ("😐" if z_score >= 1.81 else "😰")    
+
     return {
-    'z_score': z_score,
-    'components': {'A': A, 'B': B, 'C': C, 'D': D, 'E': E},
-    'risk_level': risk_level,
-    'risk_emoji': risk_emoji,
-    'base_data': {
-        'working_capital': wc,
-        'total_assets': ta,
-        'retained_earnings': re,
-        'ebit': ebit,
-        'market_cap': market_cap,
-        'total_liabilities': tl,
-        'revenues': rev,
+        'z_score': z_score,
+        'components': {'A': A, 'B': B, 'C': C, 'D': D, 'E': E},
+        'risk_level': risk_level,
+        'risk_emoji': risk_emoji,
+        'base_data': {
+            'working_capital': wc,
+            'total_assets': ta,
+            'retained_earnings': re,
+            'ebit': ebit,
+            'market_cap': market_cap,
+            'total_liabilities': tl,
+            'revenues': rev,
+        }
     }
-}
-    
+
 def calculate_dupont_analysis(df_income, df_balance):
+    
+    df_income = df_income.sort_values("date", ascending=False).reset_index(drop=True)
+    df_balance = df_balance.sort_values("date", ascending=False).reset_index(drop=True)
+
+    if df_income.empty or df_balance.empty is None:
+        return None
+    
     if len(df_income) < 3 or len(df_balance) < 3: return None
+    
     di = df_income.sort_values('date', ascending=False).reset_index(drop=True)
     db = df_balance.sort_values('date', ascending=False).reset_index(drop=True)
     results = []
@@ -606,8 +667,16 @@ def calculate_dupont_analysis(df_income, df_balance):
         }
     return {'yearly_analysis': results, 'changes': changes}
 
+
 def calculate_cashflow_analysis(df_income, df_cash):
+    df_income = df_income.sort_values("date", ascending=False).reset_index(drop=True)
+    df_cash = df_cash.sort_values("date", ascending=False).reset_index(drop=True)
+
+    if df_income.empty or df_cash.empty is None:
+        return None
+    
     if df_income.empty or df_cash.empty: return None
+    
     ci, cc = df_income.iloc[0], df_cash.iloc[0]
     ocf, icf, fcf_flow, net, capex = cc.get('OCF', 0), cc.get('CFI', 0), cc.get('CFF', 0), ci.get('netIncome', 1), cc.get('CapEx', 0)
     ocf_quality = safe_divide(ocf, net)
@@ -835,7 +904,7 @@ def generate_bs_insights(symbol: str, df_balance: pd.DataFrame, openai_api_key: 
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.1,
             max_tokens=2500,
         )
         return resp.choices[0].message.content
@@ -906,7 +975,7 @@ def generate_is_insights(symbol: str, df_income: pd.DataFrame, openai_api_key: s
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.1,
             max_tokens=2500,
         )
         return resp.choices[0].message.content
@@ -978,7 +1047,7 @@ def generate_cf_insights(symbol: str, df_cash: pd.DataFrame, openai_api_key: str
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.1,
             max_tokens=2500,
         )
         return resp.choices[0].message.content
@@ -1048,7 +1117,7 @@ def generate_core_metrics_insights(symbol: str, core: pd.DataFrame, openai_api_k
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.1,
             max_tokens=2500,
         )
         return resp.choices[0].message.content
@@ -1061,6 +1130,9 @@ def generate_core_metrics_insights(symbol: str, core: pd.DataFrame, openai_api_k
 #%%
 # ==================== AI 技術面分析 ====================
 def generate_ai_insights(symbol, stock_data, openai_api_key):
+    from datetime import datetime
+    today_date = datetime.today().strftime("%Y-%m-%d")
+    
     try:
         client = OpenAI(api_key=openai_api_key)
         first_date = stock_data["date"].iloc[0].strftime("%Y-%m-%d")
@@ -1097,8 +1169,11 @@ def generate_ai_insights(symbol, stock_data, openai_api_key):
             5 macd&OSC
             6 布林通道
             7 波動
-            8 技術面趨勢結語
-            9 列出不同的機構對 {symbol} 的估值，機構名稱、目標價、評價
+            8 近期是否有影響到市場的消息面，原因解說
+            9 技術面趨勢結語
+            10 上下游可以關注的個股，產業關係（列出個股美股代號）
+            11 同業、競爭對手可以關注的個股，優劣勢比較（列出個股美股代號）
+            12 分別列出市面上最新不同機構，對公司的估值，機構名稱、機構對此公司評價年月、目標價、評價、需注意點、產業前景(今日為{today_date}，不考慮財報，上網搜集高盛、摩根士丹利、摩根、瑞士信貸等最新評價)
         """
 
         response = client.chat.completions.create(
@@ -1107,7 +1182,7 @@ def generate_ai_insights(symbol, stock_data, openai_api_key):
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.7,
+            temperature=0.1,
             max_tokens=2000,
         )
         return response.choices[0].message.content
@@ -1179,13 +1254,13 @@ def generate_four_stage_ai_analysis(symbol, fscore, zscore, dupont, cashflow, op
 - 解釋得分的投資意義
 - 分析各項指標反映的業務狀況
 2. **Altman Z-Score 風險評估**
-- 解讀風險等級的含義
+- 解讀風險等級的含義 (<1.81為危險區域，1.81~2.99為灰色區域，>2.99為安全區域)
 - 分析各組成要素的影響
 3. **杜邦分析趨勢洞察**
 - 分析 ROE 三因子的變化
 - 識別主要驅動力
 4. **現金流結構深度分析**
-- 評估現金流品質
+- 評估現金流品質 (<0.8為需關注，0.8~1.0為尚可，1.1~1.2為良好.>1.2為優秀)
 - 分析資本支出模式
 5. **綜合財務健康診斷**
 - 整體評估
@@ -1199,7 +1274,7 @@ def generate_four_stage_ai_analysis(symbol, fscore, zscore, dupont, cashflow, op
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "system", "content": system_message}, {"role": "user", "content": user_message}],
-        temperature=0.7,
+        temperature=0.1,
         max_tokens=4000
     )
     return response.choices[0].message.content

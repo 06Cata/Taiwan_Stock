@@ -175,28 +175,31 @@ import pdfplumber
 import streamlit as st
 import google.generativeai as genai
 
-from pages.profolios_personal_subpages.stock_financial_report_pdf_ai_insight import extract_text_from_pdfs, get_financial_analysis
+from pages.profolios_personal_subpages.tw_us_stock_financial_report_pdf_ai_insight import extract_text_from_pdfs, get_financial_analysis
 
 
 # =============== STREAMLIT APP ===============
 def main():
     st.set_page_config(
-        page_title="Gemini 財報重點分析",
+        page_title="財報重點分析",
         layout="wide",
         initial_sidebar_state="expanded"
     )
 
-    st.title("財報自動條列重點分析")
-    st.caption("輸入 Gemini API Key，上傳財務報告 PDF，取得條列重點")
-
+    st.subheader("財報AI智能分析 Stock PDF AI Insight")
+    st.write("""
+        請自行申請 **[Gemini API Key](https://aistudio.google.com/)**，系統生成一份由 AI 撰寫的財務報告，[參考檔案](https://drive.google.com/drive/folders/1E4BOclNnGn0_ly3a1opP9V6Oku3snT8t?usp=sharing)，以上觀點僅供參考，並不構成任何交易建議或推薦
+    """)
+    # st.caption("輸入 Gemini API Key，上傳財務報告 PDF，取得條列重點")
+    
     # ========= 主頁表單 =========
     with st.form("main_form", clear_on_submit=False):
         st.markdown("###### 分析設定")
         api_key = st.text_input("Gemini API Key", type="password", value=os.getenv("GEMINI_API_KEY", ""))
         uploaded_files = st.file_uploader(
-            "上傳財報 PDF", 
+            "上傳公司財報 PDF", 
             type=["pdf"], 
-            accept_multiple_files=True
+            accept_multiple_files=False
         )
         submitted = st.form_submit_button("條列重點分析")
 
@@ -209,7 +212,7 @@ def main():
             return
 
         with st.spinner("提取 PDF 文字..."):
-            financial_text = extract_text_from_pdfs(uploaded_files)
+            financial_text = extract_text_from_pdfs([uploaded_files])
             
         # 
         st.write(f"財報（{len(financial_text)}字）")
@@ -232,8 +235,6 @@ def main():
         else:
             st.error("分析失敗，請檢查 API Key 或檔案內容格式")
 
-    st.markdown("---")
-    st.markdown("分析完全基於 Google Gemini 模型，以上觀點僅供參考，並不構成任何交易建議或推薦")
 
 if __name__ == "__main__":
     main()

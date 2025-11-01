@@ -1,3 +1,5 @@
+# 美股AI智能分析_USStock_AIInsight.py
+
 import streamlit as st
 import os
 import requests
@@ -30,8 +32,8 @@ def main():
 
     st.subheader("美股AI智能分析 US Stock AI Insight")
     st.write("""
-        請自行申請 **[FMP API Key](https://site.financialmodelingprep.com/)** 與 **[OpenAI API Key](https://auth.openai.com/log-in)**，系統會根據 **技術面**（均線、K線、趨勢等）與 **基本面** 資料，
-        生成一份由 AI 撰寫的專業技術分析報告，以上觀點僅供參考，並不構成任何交易建議或推薦
+        請自行申請 **[FMP API Key](https://site.financialmodelingprep.com/)** 與 **[OpenAI API Key](https://openai.com/api/)**，系統會根據 **技術面**（均線、K線、趨勢等）與 **基本面** 資料，
+        生成一份由 AI 撰寫的分析報告，[參考檔案](https://drive.google.com/drive/folders/1E4BOclNnGn0_ly3a1opP9V6Oku3snT8t?usp=sharing)，以上觀點僅供參考，並不構成任何交易建議或推薦
     """)
 
     # ==================== 頂部輸入表單 ====================
@@ -40,7 +42,7 @@ def main():
 
         c1, c2, c3 = st.columns([1.2, 1.2, 1])
         with c1:
-            symbol = st.text_input("股票代碼 (美股)", value="AAPL")
+            symbol = st.text_input("股票代碼 (美股)", value="GOOGL")
         with c2:
             fmp_api_key = st.text_input(
                 "FMP API Key", type="password", value=os.getenv("FMP_API_KEY", "")
@@ -107,6 +109,7 @@ def main():
             
             # with st.spinner("獲取關鍵指標..."):
             #     df_key_metrics = get_key_metrics(symbol, fmp_api_key)
+            
             # ==================== 四階段分析 ====================
 
             with st.spinner("計算技術指標..."):
@@ -808,22 +811,22 @@ def main():
                 # st.divider()
 
 
-                # # ==== 最近表格 ====
-                # st.subheader("最近10筆交易資料")
-                # disp = filtered_data.tail(10).sort_values("date", ascending=False).copy()
-                # disp["date"] = disp["date"].dt.strftime("%Y-%m-%d")
-                # disp = disp.rename(
-                #     columns={
-                #         "date": "日期",
-                #         "open": "開盤價",
-                #         "high": "最高價",
-                #         "low": "最低價",
-                #         "close": "收盤價",
-                #         "volume": "成交量",
-                #     }
-                # )
-                # st.dataframe(disp, use_container_width=True, hide_index=True)
-                # st.divider()
+                # ==== 最近表格 ====
+                st.subheader("最近10筆交易資料")
+                disp = filtered_data.tail(10).sort_values("date", ascending=False).copy()
+                disp["date"] = disp["date"].dt.strftime("%Y-%m-%d")
+                disp = disp.rename(
+                    columns={
+                        "date": "日期",
+                        "open": "開盤價",
+                        "high": "最高價",
+                        "low": "最低價",
+                        "close": "收盤價",
+                        "volume": "成交量",
+                    }
+                )
+                st.dataframe(disp, use_container_width=True, hide_index=True)
+                st.divider()
                 
             with tab2:    
                 # ==================== 四階段財報分析 ====================
@@ -1017,7 +1020,7 @@ def main():
                             }
                         ])
                         st.dataframe(z_components, use_container_width=True, hide_index=True)
-                        
+                    
                     with col2:
                         fig_zscore = go.Figure(go.Indicator(
                             mode="gauge+number",
@@ -1041,7 +1044,6 @@ def main():
                         fig_zscore.update_layout(height=320)
                         st.plotly_chart(fig_zscore, use_container_width=True)
 
-                st.divider()
                 
                 # 杜邦分析
                 if dupont and dupont['yearly_analysis']:
@@ -1207,22 +1209,6 @@ def main():
                 st.divider()
 
 
-                # ==== 最近表格 ====
-                st.subheader("最近10筆交易資料")
-                disp = filtered_data.tail(10).sort_values("date", ascending=False).copy()
-                disp["date"] = disp["date"].dt.strftime("%Y-%m-%d")
-                disp = disp.rename(
-                    columns={
-                        "date": "日期",
-                        "open": "開盤價",
-                        "high": "最高價",
-                        "low": "最低價",
-                        "close": "收盤價",
-                        "volume": "成交量",
-                    }
-                )
-                st.dataframe(disp, use_container_width=True, hide_index=True)
-                st.divider()
                     
 
     if __name__ == "__main__":
