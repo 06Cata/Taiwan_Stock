@@ -439,7 +439,10 @@ def main():
                 name = row.get("stock_name", row.get("company_name", ""))
                 st.write(f"**股票代碼：** {code}")
                 st.write(f"**公司名稱：** {name}")
-            
+                industry_list = company_profile_df['industry_category'].unique().tolist()
+                industries_str = "、".join(industry_list)
+                st.write(f"**相關產業：** {industries_str}")
+
             st.divider()
             
             # ===== 四階段財報分析 =====
