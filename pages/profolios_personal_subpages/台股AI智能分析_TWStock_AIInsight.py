@@ -28,9 +28,8 @@ from pages.profolios_personal_subpages.tw_stock_ai_insight import (
 def main():
     st.subheader("台股AI智能分析 TW Stock AI Insight")
     st.write("""
-        請自行申請 **FinMind API Token** 與 **OpenAI API Key**，
-        系統會根據 **技術面** 與 **基本面** 資料，
-        生成由 AI 撰寫的分析報告（僅供參考，不構成投資建議）
+        請自行申請 **[FinMind API Key](https://finmindtrade.com/)** 與 **[OpenAI API Key](https://openai.com/api/)**，系統會根據 **技術面** 與 **基本面** 資料，
+        生成由 AI 撰寫的分析報告，以上觀點僅供參考，並不構成任何交易建議或推薦
     """)
 
     # ==================== 頂部輸入表單 ====================

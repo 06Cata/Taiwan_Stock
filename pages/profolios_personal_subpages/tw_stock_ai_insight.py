@@ -853,11 +853,817 @@ def aggregate_quarterly_to_annual(df: pd.DataFrame, periods_latest: int = 4, per
     }
 
 
+# def calculate_piotroski_fscore(df_income: pd.DataFrame, df_balance: pd.DataFrame, df_cash: pd.DataFrame) -> dict:
+#     """
+#     計算 Piotroski F-Score（台股版）
+#     使用最新4季 vs 前4季的年度比較
+#     """
+#     # 合併季報為年度
+#     income_annual = aggregate_quarterly_to_annual(df_income)
+#     balance_annual = aggregate_quarterly_to_annual(df_balance)
+#     cash_annual = aggregate_quarterly_to_annual(df_cash)
+    
+#     if not all([income_annual, balance_annual, cash_annual]):
+#         return None
+    
+#     # 當期與前期資料
+#     ci, pi = income_annual['current'], income_annual['previous']
+#     cb, pb = balance_annual['current'], balance_annual['previous']
+#     cc, pc = cash_annual['current'], cash_annual['previous']
+    
+#     # 計算加權平均股數
+#     shares_now = calculate_weighted_avg_shares(df_income)
+#     shares_prev = calculate_weighted_avg_shares(df_income.iloc[4:8] if len(df_income) >= 8 else df_income)
+    
+#     # ===== 指標計算 =====
+#     # ROA
+#     roa_now = safe_divide(ci.get('netIncome', 0), cb.get('TotalAssets', 1))
+#     roa_prev = safe_divide(pi.get('netIncome', 0), pb.get('TotalAssets', 1))
+    
+#     # 營運現金流
+#     ocf_now = cc.get('OCF', 0)
+#     ocf_prev = pc.get('OCF', 0)
+#     net_income_now = ci.get('netIncome', 0)
+#     net_income_prev = pi.get('netIncome', 0)
+    
+#     # 流動比率
+#     ca_now = cb.get('CurrentAssets', 0)
+#     ca_prev = pb.get('CurrentAssets', 0)
+#     cl_now = cb.get('CurrentLiabilities', 1)
+#     cl_prev = pb.get('CurrentLiabilities', 1)
+#     cr_now = safe_divide(ca_now, cl_now)
+#     cr_prev = safe_divide(ca_prev, cl_prev)
+    
+#     # 長期負債比率
+#     ltd_now = cb.get('longTermDebt', 0)
+#     ltd_prev = pb.get('longTermDebt', 0)
+#     ltd_now_ratio = safe_divide(ltd_now, cb.get('TotalAssets', 1))
+#     ltd_prev_ratio = safe_divide(ltd_prev, pb.get('TotalAssets', 1))
+    
+#     # 營運效率
+#     gpm_now = safe_divide(ci.get('grossProfit', 0), ci.get('revenue', 1))
+#     gpm_prev = safe_divide(pi.get('grossProfit', 0), pi.get('revenue', 1))
+#     ato_now = safe_divide(ci.get('revenue', 0), cb.get('TotalAssets', 1))
+#     ato_prev = safe_divide(pi.get('revenue', 0), pb.get('TotalAssets', 1))
+    
+#     # ===== 組裝評分 =====
+#     score = {'profitability_scores': [], 'leverage_scores': [], 'efficiency_scores': [], 'total_score': 0}
+    
+#     # 1) 獲利能力（4項）
+#     score['profitability_scores'] = [
+#         {'name': 'ROA正值', 'score': int(roa_now > 0), 'current': f"{roa_now:.4f}", 
+#          'previous': f"{roa_prev:.4f}", 'status': '✓' if roa_now > 0 else '✗'},
+#         {'name': '營運現金流正值', 'score': int(ocf_now > 0), 'current': f"${ocf_now:,.0f}", 
+#          'previous': f"${ocf_prev:,.0f}", 'status': '✓' if ocf_now > 0 else '✗'},
+#         {'name': 'ROA年增', 'score': int(roa_now > roa_prev), 'current': f"{roa_now-roa_prev:.4f}", 
+#          'previous': "-", 'status': '✓' if roa_now > roa_prev else '✗'},
+#         {'name': '現金流品質（OCF > 淨利）', 'score': int(ocf_now > net_income_now), 
+#          'current': f"${ocf_now-net_income_now:,.0f}", 'previous': f"${ocf_prev-net_income_prev:,.0f}", 
+#          'status': '✓' if ocf_now > net_income_now else '✗'},
+#     ]
+    
+#     # 2) 槓桿與流動性（3項）
+#     score['leverage_scores'] = [
+#         {'name': '長期負債比率改善', 'score': int(ltd_now_ratio < ltd_prev_ratio), 
+#          'current': f"{ltd_now_ratio:.4f}", 'previous': f"{ltd_prev_ratio:.4f}", 
+#          'status': '✓' if ltd_now_ratio < ltd_prev_ratio else '✗'},
+#         {'name': '流動比率改善', 'score': int(cr_now > cr_prev), 'current': f"{cr_now:.2f}", 
+#          'previous': f"{cr_prev:.2f}", 'status': '✓' if cr_now > cr_prev else '✗'},
+#         {'name': '股份未稀釋', 'score': int(shares_now <= shares_prev) if (shares_now and shares_prev) else 0, 
+#          'current': f"{shares_now:,.0f}" if shares_now else "N/A", 
+#          'previous': f"{shares_prev:,.0f}" if shares_prev else "N/A", 
+#          'status': '✓' if (shares_now and shares_prev and shares_now <= shares_prev) else '✗'},
+#     ]
+    
+#     # 3) 營運效率（2項）
+#     score['efficiency_scores'] = [
+#         {'name': '毛利率改善', 'score': int(gpm_now > gpm_prev), 'current': f"{gpm_now:.4f}", 
+#          'previous': f"{gpm_prev:.4f}", 'status': '✓' if gpm_now > gpm_prev else '✗'},
+#         {'name': '資產周轉率改善', 'score': int(ato_now > ato_prev), 'current': f"{ato_now:.4f}", 
+#          'previous': f"{ato_prev:.4f}", 'status': '✓' if ato_now > ato_prev else '✗'},
+#     ]
+    
+#     # 總分
+#     score['total_score'] = sum(
+#         item['score']
+#         for group in (score['profitability_scores'], score['leverage_scores'], score['efficiency_scores'])
+#         for item in group
+#     )
+    
+#     return score
+
+
+# def calculate_altman_zscore(df_income: pd.DataFrame, df_balance: pd.DataFrame, market_cap: float) -> dict:
+#     """
+#     計算 Altman Z-Score（台股版）
+#     """
+#     income_annual = aggregate_quarterly_to_annual(df_income)
+#     balance_annual = aggregate_quarterly_to_annual(df_balance)
+    
+#     if not all([income_annual, balance_annual, market_cap]):
+#         return None
+    
+#     ci = income_annual['current']
+#     cb = balance_annual['current']
+    
+#     # 取得必要數據
+#     ca = cb.get('CurrentAssets', 0)
+#     cl = cb.get('CurrentLiabilities', 0)
+#     ta = cb.get('TotalAssets', 1)
+#     re = cb.get('retainedEarnings', 0)
+#     oi = ci.get('operatingIncome', 0)
+#     ie = estimate_interest_expense(df_income)
+#     tl = cb.get('Liabilities', 1)
+#     rev = ci.get('revenue', 0)
+    
+#     wc = ca - cl
+#     ebit = oi + ie  # 直接相加，不使用 abs()
+    
+#     # 計算五個組成要素
+#     A = safe_divide(wc, ta) * 1.2
+#     B = safe_divide(re, ta) * 1.4
+#     C = safe_divide(ebit, ta) * 3.3
+#     D = safe_divide(market_cap, tl) * 0.6
+#     E = safe_divide(rev, ta) * 1.0
+    
+#     z_score = A + B + C + D + E
+    
+#     # 風險等級
+#     if z_score > 2.99:
+#         risk_level, risk_emoji = "安全區域", "😊"
+#     elif z_score >= 1.81:
+#         risk_level, risk_emoji = "灰色區域", "😐"
+#     else:
+#         risk_level, risk_emoji = "危險區域", "😰"
+    
+#     return {
+#         'z_score': z_score,
+#         'components': {'A': A, 'B': B, 'C': C, 'D': D, 'E': E},
+#         'risk_level': risk_level,
+#         'risk_emoji': risk_emoji,
+#         'base_data': {
+#             'working_capital': wc,
+#             'total_assets': ta,
+#             'retained_earnings': re,
+#             'ebit': ebit,
+#             'market_cap': market_cap,
+#             'total_liabilities': tl,
+#             'revenues': rev,
+#         }
+#     }
+
+
+# def calculate_dupont_analysis(df_income: pd.DataFrame, df_balance: pd.DataFrame) -> dict:
+#     """
+#     杜邦分析（台股版）
+#     分析最近3年（12季）的ROE三因子
+#     """
+#     if df_income is None or df_income.empty or df_balance is None or df_balance.empty:
+#         return None
+    
+#     if len(df_income) < 12 or len(df_balance) < 12:
+#         return None
+    
+#     results = []
+    
+#     # 計算最近3年（每年4季）
+#     for year_idx in range(3):
+#         start_idx = year_idx * 4
+#         end_idx = start_idx + 4
+        
+#         income_data = aggregate_quarterly_to_annual(df_income.iloc[start_idx:end_idx + 4], periods_latest=4, periods_previous=4)
+#         balance_data = aggregate_quarterly_to_annual(df_balance.iloc[start_idx:end_idx + 4], periods_latest=4, periods_previous=4)
+        
+#         if not income_data or not balance_data:
+#             continue
+        
+#         ci = income_data['current']
+#         cb = balance_data['current']
+        
+#         net = ci.get('netIncome', 0)
+#         rev = ci.get('revenue', 1)
+#         ta = cb.get('TotalAssets', 1)
+#         eq = cb.get('Equity', 1)
+        
+#         nm = safe_divide(net, rev)  # 淨利率
+#         at = safe_divide(rev, ta)   # 資產週轉率
+#         em = safe_divide(ta, eq)    # 權益乘數
+        
+#         # 取最新一季的日期作為年度標記
+#         date_label = df_income.iloc[start_idx].get('date', '')
+        
+#         results.append({
+#             'date': date_label,
+#             'net_margin': nm,
+#             'asset_turnover': at,
+#             'equity_multiplier': em,
+#             'direct_roe': safe_divide(net, eq)
+#         })
+    
+#     # 計算變化
+#     changes = None
+#     if len(results) >= 2:
+#         changes = {
+#             'net_margin_change': results[0]['net_margin'] - results[1]['net_margin'],
+#             'asset_turnover_change': results[0]['asset_turnover'] - results[1]['asset_turnover'],
+#             'equity_multiplier_change': results[0]['equity_multiplier'] - results[1]['equity_multiplier'],
+#             'roe_change': results[0]['direct_roe'] - results[1]['direct_roe'],
+#         }
+    
+#     return {'yearly_analysis': results, 'changes': changes}
+
+
+# def calculate_cashflow_analysis(df_income: pd.DataFrame, df_cash: pd.DataFrame) -> dict:
+#     """
+#     現金流分析（台股版）
+#     """
+#     income_annual = aggregate_quarterly_to_annual(df_income)
+#     cash_annual = aggregate_quarterly_to_annual(df_cash)
+    
+#     if not all([income_annual, cash_annual]):
+#         return None
+    
+#     ci = income_annual['current']
+#     cc = cash_annual['current']
+    
+#     ocf = cc.get('OCF', 0)
+#     cfi = cc.get('CFI', 0)
+#     cff = cc.get('CFF', 0)
+#     net = ci.get('netIncome', 1)
+#     capex = cc.get('CapEx', 0)
+    
+#     # 現金流品質比率
+#     ocf_quality = safe_divide(ocf, net)
+    
+#     # 品質評估
+#     if ocf_quality >= 1.2:
+#         q, emoji = "優秀", "😊"
+#     elif ocf_quality >= 1.0:
+#         q, emoji = "良好", "🙂"
+#     elif ocf_quality >= 0.8:
+#         q, emoji = "尚可", "😐"
+#     else:
+#         q, emoji = "需關注", "😰"
+    
+#     # 自由現金流（使用絕對值確保 CapEx 為正）
+#     free_cashflow = ocf - abs(capex)
+    
+#     total_cf = ocf + cfi + cff
+    
+#     return {
+#         'ocf_quality': ocf_quality,
+#         'free_cashflow': free_cashflow,
+#         'quality_assessment': q,
+#         'quality_emoji': emoji,
+#         'structure': {
+#             'operating': ocf,
+#             'investing': cfi,
+#             'financing': cff,
+#             'total': total_cf
+#         }
+#     }
+
+# # ==================== 四階段財報分析計算（修正排序問題）====================
+
+# def calculate_piotroski_fscore(df_income: pd.DataFrame, df_balance: pd.DataFrame, df_cash: pd.DataFrame) -> dict:
+#     """
+#     計算 Piotroski F-Score（台股版）
+#     使用最新4季 vs 前4季的年度比較
+#     """
+#     print("\n" + "="*80)
+#     print("📊 Piotroski F-Score 計算過程")
+#     print("="*80)
+    
+#     # ⚠️ 確保數據按日期降序排列（最新的在前，索引0是最新的季度）
+#     if df_income is not None and not df_income.empty:
+#         df_income = df_income.sort_values('date', ascending=False).reset_index(drop=True)
+#     if df_balance is not None and not df_balance.empty:
+#         df_balance = df_balance.sort_values('date', ascending=False).reset_index(drop=True)
+#     if df_cash is not None and not df_cash.empty:
+#         df_cash = df_cash.sort_values('date', ascending=False).reset_index(drop=True)
+    
+#     print(f"\n🔍 數據範圍檢查：")
+#     if df_income is not None and not df_income.empty:
+#         print(f"  損益表: {len(df_income)} 季，最新: {df_income.iloc[0]['date'].strftime('%Y-%m-%d')}, 最舊: {df_income.iloc[-1]['date'].strftime('%Y-%m-%d')}")
+#     if df_balance is not None and not df_balance.empty:
+#         print(f"  資產負債表: {len(df_balance)} 季，最新: {df_balance.iloc[0]['date'].strftime('%Y-%m-%d')}, 最舊: {df_balance.iloc[-1]['date'].strftime('%Y-%m-%d')}")
+#     if df_cash is not None and not df_cash.empty:
+#         print(f"  現金流量表: {len(df_cash)} 季，最新: {df_cash.iloc[0]['date'].strftime('%Y-%m-%d')}, 最舊: {df_cash.iloc[-1]['date'].strftime('%Y-%m-%d')}")
+    
+#     # 合併季報為年度
+#     income_annual = aggregate_quarterly_to_annual(df_income)
+#     balance_annual = aggregate_quarterly_to_annual(df_balance)
+#     cash_annual = aggregate_quarterly_to_annual(df_cash)
+    
+#     if not all([income_annual, balance_annual, cash_annual]):
+#         return None
+    
+#     # 打印原始季度數據（最新4季，從早到晚顯示）
+#     print("\n📅 損益表 - 最新4季（t0-t3）數據（從早到晚顯示）：")
+#     if df_income is not None and not df_income.empty and len(df_income) >= 4:
+#         # iloc[:4] 取索引 0,1,2,3（最新的4季）
+#         latest_4q = df_income.iloc[:4].copy()
+#         # 反轉順序以從早到晚顯示
+#         latest_4q = latest_4q.sort_values('date', ascending=True)
+#         for idx, row in latest_4q.iterrows():
+#             q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+#             print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 營收: {row.get('revenue', 0):,.0f} | 淨利: {row.get('netIncome', 0):,.0f}")
+    
+#     print("\n📅 損益表 - 前4季（t4-t7）數據（從早到晚顯示）：")
+#     if df_income is not None and len(df_income) >= 8:
+#         # iloc[4:8] 取索引 4,5,6,7（前4季）
+#         prev_4q = df_income.iloc[4:8].copy()
+#         prev_4q = prev_4q.sort_values('date', ascending=True)
+#         for idx, row in prev_4q.iterrows():
+#             q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+#             print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 營收: {row.get('revenue', 0):,.0f} | 淨利: {row.get('netIncome', 0):,.0f}")
+    
+#     print("\n📅 資產負債表 - 最新4季（t0-t3）數據（從早到晚顯示）：")
+#     if df_balance is not None and not df_balance.empty and len(df_balance) >= 4:
+#         latest_4q = df_balance.iloc[:4].copy()
+#         latest_4q = latest_4q.sort_values('date', ascending=True)
+#         for idx, row in latest_4q.iterrows():
+#             q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+#             print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 總資產: {row.get('TotalAssets', 0):,.0f} | 股東權益: {row.get('Equity', 0):,.0f}")
+    
+#     print("\n📅 現金流量表 - 最新4季（t0-t3）數據（從早到晚顯示）：")
+#     if df_cash is not None and not df_cash.empty and len(df_cash) >= 4:
+#         latest_4q = df_cash.iloc[:4].copy()
+#         latest_4q = latest_4q.sort_values('date', ascending=True)
+#         for idx, row in latest_4q.iterrows():
+#             q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+#             print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | OCF: {row.get('OCF', 0):,.0f} | FCF: {row.get('FCF', 0):,.0f}")
+    
+#     # 當期與前期資料
+#     ci, pi = income_annual['current'], income_annual['previous']
+#     cb, pb = balance_annual['current'], balance_annual['previous']
+#     cc, pc = cash_annual['current'], cash_annual['previous']
+    
+#     print("\n💰 年度合計數據（4季加總/平均）：")
+#     print(f"  當期年度（t0-t3）營收: {ci.get('revenue', 0):,.0f}")
+#     print(f"  前期年度（t4-t7）營收: {pi.get('revenue', 0):,.0f}")
+#     print(f"  當期年度（t0-t3）淨利: {ci.get('netIncome', 0):,.0f}")
+#     print(f"  前期年度（t4-t7）淨利: {pi.get('netIncome', 0):,.0f}")
+#     print(f"  當期年度（t0-t3）總資產(平均): {cb.get('TotalAssets', 0):,.0f}")
+#     print(f"  前期年度（t4-t7）總資產(平均): {pb.get('TotalAssets', 0):,.0f}")
+#     print(f"  當期年度（t0-t3）OCF: {cc.get('OCF', 0):,.0f}")
+#     print(f"  前期年度（t4-t7）OCF: {pc.get('OCF', 0):,.0f}")
+    
+#     # 計算加權平均股數
+#     shares_now = calculate_weighted_avg_shares(df_income)
+#     shares_prev = calculate_weighted_avg_shares(df_income.iloc[4:8] if len(df_income) >= 8 else df_income)
+    
+#     print(f"\n📈 加權平均股數：")
+#     print(f"  當期: {shares_now:,.0f} 股" if shares_now and not np.isnan(shares_now) else "  當期: N/A")
+#     print(f"  前期: {shares_prev:,.0f} 股" if shares_prev and not np.isnan(shares_prev) else "  前期: N/A")
+    
+#     # ===== 指標計算 =====
+#     # ROA
+#     roa_now = safe_divide(ci.get('netIncome', 0), cb.get('TotalAssets', 1))
+#     roa_prev = safe_divide(pi.get('netIncome', 0), pb.get('TotalAssets', 1))
+    
+#     print(f"\n🔢 ROA 計算：")
+#     print(f"  當期 ROA = {ci.get('netIncome', 0):,.0f} / {cb.get('TotalAssets', 1):,.0f} = {roa_now:.4f}")
+#     print(f"  前期 ROA = {pi.get('netIncome', 0):,.0f} / {pb.get('TotalAssets', 1):,.0f} = {roa_prev:.4f}")
+    
+#     # 營運現金流
+#     ocf_now = cc.get('OCF', 0)
+#     ocf_prev = pc.get('OCF', 0)
+#     net_income_now = ci.get('netIncome', 0)
+#     net_income_prev = pi.get('netIncome', 0)
+    
+#     print(f"\n💵 現金流品質：")
+#     print(f"  當期 OCF: {ocf_now:,.0f}, 淨利: {net_income_now:,.0f}, 品質比: {safe_divide(ocf_now, net_income_now):.4f}")
+#     print(f"  前期 OCF: {ocf_prev:,.0f}, 淨利: {net_income_prev:,.0f}, 品質比: {safe_divide(ocf_prev, net_income_prev):.4f}")
+    
+#     # 流動比率
+#     ca_now = cb.get('CurrentAssets', 0)
+#     ca_prev = pb.get('CurrentAssets', 0)
+#     cl_now = cb.get('CurrentLiabilities', 1)
+#     cl_prev = pb.get('CurrentLiabilities', 1)
+#     cr_now = safe_divide(ca_now, cl_now)
+#     cr_prev = safe_divide(ca_prev, cl_prev)
+    
+#     print(f"\n📊 流動比率：")
+#     print(f"  當期 = {ca_now:,.0f} / {cl_now:,.0f} = {cr_now:.2f}")
+#     print(f"  前期 = {ca_prev:,.0f} / {cl_prev:,.0f} = {cr_prev:.2f}")
+    
+#     # 長期負債比率
+#     ltd_now = cb.get('longTermDebt', 0)
+#     ltd_prev = pb.get('longTermDebt', 0)
+#     ltd_now_ratio = safe_divide(ltd_now, cb.get('TotalAssets', 1))
+#     ltd_prev_ratio = safe_divide(ltd_prev, pb.get('TotalAssets', 1))
+    
+#     print(f"\n🏦 長期負債比率：")
+#     print(f"  當期 = {ltd_now:,.0f} / {cb.get('TotalAssets', 1):,.0f} = {ltd_now_ratio:.4f}")
+#     print(f"  前期 = {ltd_prev:,.0f} / {pb.get('TotalAssets', 1):,.0f} = {ltd_prev_ratio:.4f}")
+    
+#     # 營運效率
+#     gpm_now = safe_divide(ci.get('grossProfit', 0), ci.get('revenue', 1))
+#     gpm_prev = safe_divide(pi.get('grossProfit', 0), pi.get('revenue', 1))
+#     ato_now = safe_divide(ci.get('revenue', 0), cb.get('TotalAssets', 1))
+#     ato_prev = safe_divide(pi.get('revenue', 0), pb.get('TotalAssets', 1))
+    
+#     print(f"\n📈 毛利率：")
+#     print(f"  當期 = {ci.get('grossProfit', 0):,.0f} / {ci.get('revenue', 1):,.0f} = {gpm_now:.4f}")
+#     print(f"  前期 = {pi.get('grossProfit', 0):,.0f} / {pi.get('revenue', 1):,.0f} = {gpm_prev:.4f}")
+    
+#     print(f"\n🔄 資產周轉率：")
+#     print(f"  當期 = {ci.get('revenue', 0):,.0f} / {cb.get('TotalAssets', 1):,.0f} = {ato_now:.4f}")
+#     print(f"  前期 = {pi.get('revenue', 0):,.0f} / {pb.get('TotalAssets', 1):,.0f} = {ato_prev:.4f}")
+    
+#     # ===== 組裝評分 =====
+#     score = {'profitability_scores': [], 'leverage_scores': [], 'efficiency_scores': [], 'total_score': 0}
+    
+#     # 1) 獲利能力（4項）
+#     score['profitability_scores'] = [
+#         {'name': 'ROA正值', 'score': int(roa_now > 0), 'current': f"{roa_now:.4f}", 
+#          'previous': f"{roa_prev:.4f}", 'status': '✓' if roa_now > 0 else '✗'},
+#         {'name': '營運現金流正值', 'score': int(ocf_now > 0), 'current': f"${ocf_now:,.0f}", 
+#          'previous': f"${ocf_prev:,.0f}", 'status': '✓' if ocf_now > 0 else '✗'},
+#         {'name': 'ROA年增', 'score': int(roa_now > roa_prev), 'current': f"{roa_now-roa_prev:.4f}", 
+#          'previous': "-", 'status': '✓' if roa_now > roa_prev else '✗'},
+#         {'name': '現金流品質（OCF > 淨利）', 'score': int(ocf_now > net_income_now), 
+#          'current': f"${ocf_now-net_income_now:,.0f}", 'previous': f"${ocf_prev-net_income_prev:,.0f}", 
+#          'status': '✓' if ocf_now > net_income_now else '✗'},
+#     ]
+    
+#     # 2) 槓桿與流動性（3項）
+#     score['leverage_scores'] = [
+#         {'name': '長期負債比率改善', 'score': int(ltd_now_ratio < ltd_prev_ratio), 
+#          'current': f"{ltd_now_ratio:.4f}", 'previous': f"{ltd_prev_ratio:.4f}", 
+#          'status': '✓' if ltd_now_ratio < ltd_prev_ratio else '✗'},
+#         {'name': '流動比率改善', 'score': int(cr_now > cr_prev), 'current': f"{cr_now:.2f}", 
+#          'previous': f"{cr_prev:.2f}", 'status': '✓' if cr_now > cr_prev else '✗'},
+#         {'name': '股份未稀釋', 'score': int(shares_now <= shares_prev) if (shares_now and shares_prev and not np.isnan(shares_now) and not np.isnan(shares_prev)) else 0, 
+#          'current': f"{shares_now:,.0f}" if shares_now and not np.isnan(shares_now) else "N/A", 
+#          'previous': f"{shares_prev:,.0f}" if shares_prev and not np.isnan(shares_prev) else "N/A", 
+#          'status': '✓' if (shares_now and shares_prev and not np.isnan(shares_now) and not np.isnan(shares_prev) and shares_now <= shares_prev) else '✗'},
+#     ]
+    
+#     # 3) 營運效率（2項）
+#     score['efficiency_scores'] = [
+#         {'name': '毛利率改善', 'score': int(gpm_now > gpm_prev), 'current': f"{gpm_now:.4f}", 
+#          'previous': f"{gpm_prev:.4f}", 'status': '✓' if gpm_now > gpm_prev else '✗'},
+#         {'name': '資產周轉率改善', 'score': int(ato_now > ato_prev), 'current': f"{ato_now:.4f}", 
+#          'previous': f"{ato_prev:.4f}", 'status': '✓' if ato_now > ato_prev else '✗'},
+#     ]
+    
+#     # 總分
+#     score['total_score'] = sum(
+#         item['score']
+#         for group in (score['profitability_scores'], score['leverage_scores'], score['efficiency_scores'])
+#         for item in group
+#     )
+    
+#     print(f"\n🎯 F-Score 總分: {score['total_score']}/9")
+#     print("="*80 + "\n")
+    
+#     return score
+
+
+# def calculate_altman_zscore(df_income: pd.DataFrame, df_balance: pd.DataFrame, market_cap: float) -> dict:
+#     """
+#     計算 Altman Z-Score（台股版）
+#     """
+#     print("\n" + "="*80)
+#     print("📊 Altman Z-Score 計算過程")
+#     print("="*80)
+    
+#     # ⚠️ 確保數據按日期降序排列（最新的在前）
+#     if df_income is not None and not df_income.empty:
+#         df_income = df_income.sort_values('date', ascending=False).reset_index(drop=True)
+#     if df_balance is not None and not df_balance.empty:
+#         df_balance = df_balance.sort_values('date', ascending=False).reset_index(drop=True)
+    
+#     income_annual = aggregate_quarterly_to_annual(df_income)
+#     balance_annual = aggregate_quarterly_to_annual(df_balance)
+    
+#     if not all([income_annual, balance_annual, market_cap]):
+#         return None
+    
+#     # 打印原始季度數據
+#     print("\n📅 最新4季資產負債數據（從早到晚顯示）：")
+#     if df_balance is not None and not df_balance.empty and len(df_balance) >= 4:
+#         latest_4q = df_balance.iloc[:4].copy()
+#         latest_4q = latest_4q.sort_values('date', ascending=True)
+#         for idx, row in latest_4q.iterrows():
+#             ca = row.get('CurrentAssets', 0)
+#             cl = row.get('CurrentLiabilities', 0)
+#             q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+#             print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 流動資產: {ca:,.0f} | 流動負債: {cl:,.0f} | 營運資金: {ca-cl:,.0f}")
+    
+#     ci = income_annual['current']
+#     cb = balance_annual['current']
+    
+#     print(f"\n💰 市值: {market_cap:,.0f}")
+    
+#     # 取得必要數據
+#     ca = cb.get('CurrentAssets', 0)
+#     cl = cb.get('CurrentLiabilities', 0)
+#     ta = cb.get('TotalAssets', 1)
+#     re = cb.get('retainedEarnings', 0)
+#     oi = ci.get('operatingIncome', 0)
+#     ie = estimate_interest_expense(df_income)
+#     tl = cb.get('Liabilities', 1)
+#     rev = ci.get('revenue', 0)
+    
+#     wc = ca - cl
+#     ebit = oi + ie
+    
+#     print(f"\n📊 基礎數據：")
+#     print(f"  營運資金(WC) = 流動資產 - 流動負債 = {ca:,.0f} - {cl:,.0f} = {wc:,.0f}")
+#     print(f"  總資產(TA) = {ta:,.0f}")
+#     print(f"  保留盈餘(RE) = {re:,.0f}")
+#     print(f"  營業利益(OI) = {oi:,.0f}")
+#     print(f"  估計利息費用(IE) = {ie:,.0f}")
+#     print(f"  EBIT = OI + IE = {oi:,.0f} + {ie:,.0f} = {ebit:,.0f}")
+#     print(f"  總負債(TL) = {tl:,.0f}")
+#     print(f"  營收(Rev) = {rev:,.0f}")
+    
+#     # 計算五個組成要素
+#     A = safe_divide(wc, ta) * 1.2
+#     B = safe_divide(re, ta) * 1.4
+#     C = safe_divide(ebit, ta) * 3.3
+#     D = safe_divide(market_cap, tl) * 0.6
+#     E = safe_divide(rev, ta) * 1.0
+    
+#     print(f"\n🔢 Z-Score 組成要素：")
+#     print(f"  A = (WC/TA) × 1.2 = ({wc:,.0f}/{ta:,.0f}) × 1.2 = {A:.4f}")
+#     print(f"  B = (RE/TA) × 1.4 = ({re:,.0f}/{ta:,.0f}) × 1.4 = {B:.4f}")
+#     print(f"  C = (EBIT/TA) × 3.3 = ({ebit:,.0f}/{ta:,.0f}) × 3.3 = {C:.4f}")
+#     print(f"  D = (MC/TL) × 0.6 = ({market_cap:,.0f}/{tl:,.0f}) × 0.6 = {D:.4f}")
+#     print(f"  E = (Rev/TA) × 1.0 = ({rev:,.0f}/{ta:,.0f}) × 1.0 = {E:.4f}")
+    
+#     z_score = A + B + C + D + E
+    
+#     print(f"\n🎯 Z-Score = A + B + C + D + E = {A:.4f} + {B:.4f} + {C:.4f} + {D:.4f} + {E:.4f} = {z_score:.4f}")
+    
+#     # 風險等級
+#     if z_score > 2.99:
+#         risk_level, risk_emoji = "安全區域", "😊"
+#     elif z_score >= 1.81:
+#         risk_level, risk_emoji = "灰色區域", "😐"
+#     else:
+#         risk_level, risk_emoji = "危險區域", "😰"
+    
+#     print(f"📈 風險等級: {risk_level} {risk_emoji}")
+#     print("="*80 + "\n")
+    
+#     return {
+#         'z_score': z_score,
+#         'components': {'A': A, 'B': B, 'C': C, 'D': D, 'E': E},
+#         'risk_level': risk_level,
+#         'risk_emoji': risk_emoji,
+#         'base_data': {
+#             'working_capital': wc,
+#             'total_assets': ta,
+#             'retained_earnings': re,
+#             'ebit': ebit,
+#             'market_cap': market_cap,
+#             'total_liabilities': tl,
+#             'revenues': rev,
+#         }
+#     }
+
+
+# def calculate_dupont_analysis(df_income: pd.DataFrame, df_balance: pd.DataFrame) -> dict:
+#     """
+#     杜邦分析（台股版）
+#     分析最近3年（12季）的ROE三因子
+#     """
+#     print("\n" + "="*80)
+#     print("📊 杜邦分析計算過程")
+#     print("="*80)
+    
+#     if df_income is None or df_income.empty or df_balance is None or df_balance.empty:
+#         return None
+    
+#     # ⚠️ 確保數據按日期降序排列（最新的在前）
+#     df_income = df_income.sort_values('date', ascending=False).reset_index(drop=True)
+#     df_balance = df_balance.sort_values('date', ascending=False).reset_index(drop=True)
+    
+#     if len(df_income) < 12 or len(df_balance) < 12:
+#         print(f"⚠️ 數據不足：損益表 {len(df_income)} 季，資產負債表 {len(df_balance)} 季（需要至少12季）")
+#         return None
+    
+#     results = []
+    
+#     # 計算最近3年（每年4季）
+#     for year_idx in range(3):
+#         start_idx = year_idx * 4
+#         end_idx = start_idx + 4
+        
+#         print(f"\n📅 第 {year_idx + 1} 年分析（索引 {start_idx}-{end_idx-1}，即 t{start_idx}-t{end_idx-1}）:")
+        
+#         # 打印該年度4季數據（從早到晚）
+#         print(f"  損益表 4季數據（從早到晚顯示）：")
+#         df_sorted = df_income.iloc[start_idx:end_idx].copy().sort_values('date', ascending=True)
+#         for idx, row in df_sorted.iterrows():
+#             q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+#             print(f"    {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 營收: {row.get('revenue', 0):,.0f} | 淨利: {row.get('netIncome', 0):,.0f}")
+        
+#         print(f"  資產負債表 4季數據（從早到晚顯示）：")
+#         df_sorted = df_balance.iloc[start_idx:end_idx].copy().sort_values('date', ascending=True)
+#         for idx, row in df_sorted.iterrows():
+#             q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+#             print(f"    {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 總資產: {row.get('TotalAssets', 0):,.0f} | 權益: {row.get('Equity', 0):,.0f}")
+        
+#         income_data = aggregate_quarterly_to_annual(df_income.iloc[start_idx:end_idx + 4], periods_latest=4, periods_previous=4)
+#         balance_data = aggregate_quarterly_to_annual(df_balance.iloc[start_idx:end_idx + 4], periods_latest=4, periods_previous=4)
+        
+#         if not income_data or not balance_data:
+#             continue
+        
+#         ci = income_data['current']
+#         cb = balance_data['current']
+        
+#         net = ci.get('netIncome', 0)
+#         rev = ci.get('revenue', 1)
+#         ta = cb.get('TotalAssets', 1)
+#         eq = cb.get('Equity', 1)
+        
+#         nm = safe_divide(net, rev)  # 淨利率
+#         at = safe_divide(rev, ta)   # 資產週轉率
+#         em = safe_divide(ta, eq)    # 權益乘數
+#         roe = safe_divide(net, eq)
+        
+#         print(f"\n  💰 年度合計/平均：")
+#         print(f"    淨利: {net:,.0f}")
+#         print(f"    營收: {rev:,.0f}")
+#         print(f"    總資產(平均): {ta:,.0f}")
+#         print(f"    權益(平均): {eq:,.0f}")
+        
+#         print(f"\n  🔢 ROE三因子：")
+#         print(f"    淨利率(NM) = 淨利/營收 = {net:,.0f}/{rev:,.0f} = {nm:.4f}")
+#         print(f"    資產週轉率(AT) = 營收/總資產 = {rev:,.0f}/{ta:,.0f} = {at:.4f}")
+#         print(f"    權益乘數(EM) = 總資產/權益 = {ta:,.0f}/{eq:,.0f} = {em:.4f}")
+#         print(f"    ROE = NM × AT × EM = {nm:.4f} × {at:.4f} × {em:.4f} = {nm*at*em:.4f}")
+#         print(f"    直接ROE = 淨利/權益 = {net:,.0f}/{eq:,.0f} = {roe:.4f}")
+        
+#         # 取最新一季的日期作為年度標記
+#         date_label = df_income.iloc[start_idx].get('date', '')
+        
+#         results.append({
+#             'date': date_label,
+#             'net_margin': nm,
+#             'asset_turnover': at,
+#             'equity_multiplier': em,
+#             'direct_roe': roe
+#         })
+    
+#     # 計算變化
+#     changes = None
+#     if len(results) >= 2:
+#         changes = {
+#             'net_margin_change': results[0]['net_margin'] - results[1]['net_margin'],
+#             'asset_turnover_change': results[0]['asset_turnover'] - results[1]['asset_turnover'],
+#             'equity_multiplier_change': results[0]['equity_multiplier'] - results[1]['equity_multiplier'],
+#             'roe_change': results[0]['direct_roe'] - results[1]['direct_roe'],
+#         }
+        
+#         print(f"\n📈 年度變化（最新年 vs 前一年）：")
+#         print(f"  淨利率變化: {changes['net_margin_change']:+.4f}")
+#         print(f"  資產週轉率變化: {changes['asset_turnover_change']:+.4f}")
+#         print(f"  權益乘數變化: {changes['equity_multiplier_change']:+.4f}")
+#         print(f"  ROE變化: {changes['roe_change']:+.4f}")
+    
+#     print("="*80 + "\n")
+    
+#     return {'yearly_analysis': results, 'changes': changes}
+
+
+# def calculate_cashflow_analysis(df_income: pd.DataFrame, df_cash: pd.DataFrame) -> dict:
+#     """
+#     現金流分析（台股版）
+#     """
+#     print("\n" + "="*80)
+#     print("📊 現金流分析計算過程")
+#     print("="*80)
+    
+#     # ⚠️ 確保數據按日期降序排列（最新的在前）
+#     if df_income is not None and not df_income.empty:
+#         df_income = df_income.sort_values('date', ascending=False).reset_index(drop=True)
+#     if df_cash is not None and not df_cash.empty:
+#         df_cash = df_cash.sort_values('date', ascending=False).reset_index(drop=True)
+    
+#     income_annual = aggregate_quarterly_to_annual(df_income)
+#     cash_annual = aggregate_quarterly_to_annual(df_cash)
+    
+#     if not all([income_annual, cash_annual]):
+#         return None
+    
+#     # 打印原始季度數據（從早到晚）
+#     print("\n📅 最新4季現金流數據（從早到晚顯示）：")
+#     if df_cash is not None and not df_cash.empty and len(df_cash) >= 4:
+#         latest_4q = df_cash.iloc[:4].copy()
+#         latest_4q = latest_4q.sort_values('date', ascending=True)
+#         for idx, row in latest_4q.iterrows():
+#             ocf = row.get('OCF', 0)
+#             capex = row.get('CapEx', 0)
+#             fcf = row.get('FCF', 0)
+#             q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+#             print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | OCF: {ocf:,.0f} | CapEx: {capex:,.0f} | FCF: {fcf:,.0f}")
+    
+#     print("\n📅 最新4季淨利數據（從早到晚顯示）：")
+#     if df_income is not None and not df_income.empty and len(df_income) >= 4:
+#         latest_4q = df_income.iloc[:4].copy()
+#         latest_4q = latest_4q.sort_values('date', ascending=True)
+#         for idx, row in latest_4q.iterrows():
+#             q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+#             print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 淨利: {row.get('netIncome', 0):,.0f}")
+    
+#     ci = income_annual['current']
+#     cc = cash_annual['current']
+    
+#     ocf = cc.get('OCF', 0)
+#     cfi = cc.get('CFI', 0)
+#     cff = cc.get('CFF', 0)
+#     net = ci.get('netIncome', 1)
+#     capex = cc.get('CapEx', 0)
+    
+#     print(f"\n💰 年度合計數據（4季加總）：")
+#     print(f"  營運現金流(OCF): {ocf:,.0f}")
+#     print(f"  投資現金流(CFI): {cfi:,.0f}")
+#     print(f"  融資現金流(CFF): {cff:,.0f}")
+#     print(f"  淨利: {net:,.0f}")
+#     print(f"  資本支出(CapEx): {capex:,.0f}")
+    
+#     # 現金流品質比率
+#     ocf_quality = safe_divide(ocf, net)
+    
+#     print(f"\n🔢 現金流品質比率：")
+#     print(f"  OCF品質 = OCF/淨利 = {ocf:,.0f}/{net:,.0f} = {ocf_quality:.4f}")
+    
+#     # 品質評估
+#     if ocf_quality >= 1.2:
+#         q, emoji = "優秀", "😊"
+#     elif ocf_quality >= 1.0:
+#         q, emoji = "良好", "🙂"
+#     elif ocf_quality >= 0.8:
+#         q, emoji = "尚可", "😐"
+#     else:
+#         q, emoji = "需關注", "😰"
+    
+#     print(f"  評估: {q} {emoji}")
+    
+#     # 自由現金流（使用絕對值確保 CapEx 為正）
+#     free_cashflow = ocf - abs(capex)
+    
+#     print(f"\n💵 自由現金流：")
+#     print(f"  FCF = OCF - |CapEx| = {ocf:,.0f} - {abs(capex):,.0f} = {free_cashflow:,.0f}")
+    
+#     total_cf = ocf + cfi + cff
+    
+#     print(f"\n📊 現金流結構：")
+#     print(f"  營運現金流: {ocf:,.0f} ({safe_divide(ocf, total_cf)*100:.1f}%)" if total_cf != 0 else f"  營運現金流: {ocf:,.0f}")
+#     print(f"  投資現金流: {cfi:,.0f} ({safe_divide(cfi, total_cf)*100:.1f}%)" if total_cf != 0 else f"  投資現金流: {cfi:,.0f}")
+#     print(f"  融資現金流: {cff:,.0f} ({safe_divide(cff, total_cf)*100:.1f}%)" if total_cf != 0 else f"  融資現金流: {cff:,.0f}")
+#     print(f"  總現金流: {total_cf:,.0f}")
+    
+#     print("="*80 + "\n")
+    
+#     return {
+#         'ocf_quality': ocf_quality,
+#         'free_cashflow': free_cashflow,
+#         'quality_assessment': q,
+#         'quality_emoji': emoji,
+#         'structure': {
+#             'operating': ocf,
+#             'investing': cfi,
+#             'financing': cff,
+#             'total': total_cf
+#         }
+#     }
+
+
+# ==================== 四階段財報分析計算（完整打印版）====================
+
 def calculate_piotroski_fscore(df_income: pd.DataFrame, df_balance: pd.DataFrame, df_cash: pd.DataFrame) -> dict:
     """
     計算 Piotroski F-Score（台股版）
     使用最新4季 vs 前4季的年度比較
     """
+    print("\n" + "="*80)
+    print("📊 Piotroski F-Score 計算過程")
+    print("="*80)
+    
+    # ⚠️ 確保數據按日期降序排列（最新的在前，索引0是最新的季度）
+    if df_income is not None and not df_income.empty:
+        df_income = df_income.sort_values('date', ascending=False).reset_index(drop=True)
+    if df_balance is not None and not df_balance.empty:
+        df_balance = df_balance.sort_values('date', ascending=False).reset_index(drop=True)
+    if df_cash is not None and not df_cash.empty:
+        df_cash = df_cash.sort_values('date', ascending=False).reset_index(drop=True)
+    
+    print(f"\n🔍 數據範圍檢查：")
+    if df_income is not None and not df_income.empty:
+        print(f"  損益表: {len(df_income)} 季，最新: {df_income.iloc[0]['date'].strftime('%Y-%m-%d')}, 最舊: {df_income.iloc[-1]['date'].strftime('%Y-%m-%d')}")
+    if df_balance is not None and not df_balance.empty:
+        print(f"  資產負債表: {len(df_balance)} 季，最新: {df_balance.iloc[0]['date'].strftime('%Y-%m-%d')}, 最舊: {df_balance.iloc[-1]['date'].strftime('%Y-%m-%d')}")
+    if df_cash is not None and not df_cash.empty:
+        print(f"  現金流量表: {len(df_cash)} 季，最新: {df_cash.iloc[0]['date'].strftime('%Y-%m-%d')}, 最舊: {df_cash.iloc[-1]['date'].strftime('%Y-%m-%d')}")
+    
     # 合併季報為年度
     income_annual = aggregate_quarterly_to_annual(df_income)
     balance_annual = aggregate_quarterly_to_annual(df_balance)
@@ -866,27 +1672,178 @@ def calculate_piotroski_fscore(df_income: pd.DataFrame, df_balance: pd.DataFrame
     if not all([income_annual, balance_annual, cash_annual]):
         return None
     
+    # 打印原始季度數據（最新4季，從早到晚顯示）
+    print("\n📅 損益表 - 最新4季（t0-t3）數據（從早到晚顯示）：")
+    if df_income is not None and not df_income.empty and len(df_income) >= 4:
+        latest_4q = df_income.iloc[:4].copy()
+        latest_4q = latest_4q.sort_values('date', ascending=True)
+        for idx, row in latest_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 營收: {row.get('revenue', 0):,.0f} | 淨利: {row.get('netIncome', 0):,.0f}")
+    
+    print("\n📅 損益表 - 前4季（t4-t7）數據（從早到晚顯示）：")
+    if df_income is not None and len(df_income) >= 8:
+        prev_4q = df_income.iloc[4:8].copy()
+        prev_4q = prev_4q.sort_values('date', ascending=True)
+        for idx, row in prev_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 營收: {row.get('revenue', 0):,.0f} | 淨利: {row.get('netIncome', 0):,.0f}")
+    
+    print("\n📅 資產負債表 - 最新4季（t0-t3）數據（從早到晚顯示）：")
+    if df_balance is not None and not df_balance.empty and len(df_balance) >= 4:
+        latest_4q = df_balance.iloc[:4].copy()
+        latest_4q = latest_4q.sort_values('date', ascending=True)
+        for idx, row in latest_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 總資產: {row.get('TotalAssets', 0):,.0f} | 股東權益: {row.get('Equity', 0):,.0f}")
+    
+    print("\n📅 資產負債表 - 前4季（t4-t7）數據（從早到晚顯示）：")
+    if df_balance is not None and len(df_balance) >= 8:
+        prev_4q = df_balance.iloc[4:8].copy()
+        prev_4q = prev_4q.sort_values('date', ascending=True)
+        for idx, row in prev_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 總資產: {row.get('TotalAssets', 0):,.0f} | 股東權益: {row.get('Equity', 0):,.0f}")
+    
+    print("\n📅 現金流量表 - 最新4季（t0-t3）數據（從早到晚顯示）：")
+    if df_cash is not None and not df_cash.empty and len(df_cash) >= 4:
+        latest_4q = df_cash.iloc[:4].copy()
+        latest_4q = latest_4q.sort_values('date', ascending=True)
+        for idx, row in latest_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | OCF: {row.get('OCF', 0):,.0f} | FCF: {row.get('FCF', 0):,.0f}")
+    
+    print("\n📅 現金流量表 - 前4季（t4-t7）數據（從早到晚顯示）：")
+    if df_cash is not None and len(df_cash) >= 8:
+        prev_4q = df_cash.iloc[4:8].copy()
+        prev_4q = prev_4q.sort_values('date', ascending=True)
+        for idx, row in prev_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | OCF: {row.get('OCF', 0):,.0f} | FCF: {row.get('FCF', 0):,.0f}")
+    
     # 當期與前期資料
     ci, pi = income_annual['current'], income_annual['previous']
     cb, pb = balance_annual['current'], balance_annual['previous']
     cc, pc = cash_annual['current'], cash_annual['previous']
     
+    print("\n💰 年度合計數據（4季加總/平均）：")
+    print(f"  當期年度（t0-t3）營收: {ci.get('revenue', 0):,.0f}")
+    print(f"  前期年度（t4-t7）營收: {pi.get('revenue', 0):,.0f}")
+    print(f"  當期年度（t0-t3）淨利: {ci.get('netIncome', 0):,.0f}")
+    print(f"  前期年度（t4-t7）淨利: {pi.get('netIncome', 0):,.0f}")
+    print(f"  當期年度（t0-t3）總資產(平均): {cb.get('TotalAssets', 0):,.0f}")
+    print(f"  前期年度（t4-t7）總資產(平均): {pb.get('TotalAssets', 0):,.0f}")
+    print(f"  當期年度（t0-t3）OCF: {cc.get('OCF', 0):,.0f}")
+    print(f"  前期年度（t4-t7）OCF: {pc.get('OCF', 0):,.0f}")
+    
     # 計算加權平均股數
     shares_now = calculate_weighted_avg_shares(df_income)
     shares_prev = calculate_weighted_avg_shares(df_income.iloc[4:8] if len(df_income) >= 8 else df_income)
     
+    print(f"\n📈 加權平均股數：")
+    print(f"  當期: {shares_now:,.0f} 股" if shares_now and not np.isnan(shares_now) else "  當期: N/A")
+    print(f"  前期: {shares_prev:,.0f} 股" if shares_prev and not np.isnan(shares_prev) else "  前期: N/A")
+    
     # ===== 指標計算 =====
-    # ROA
+    
+    # 1. ROA 計算
+    print("\n" + "="*80)
+    print("📊 指標 1: ROA（資產報酬率）")
+    print("="*80)
+    
+    print("\n📋 最新4季數據：")
+    if df_income is not None and df_balance is not None and len(df_income) >= 4 and len(df_balance) >= 4:
+        latest_4q_income = df_income.iloc[:4].copy().sort_values('date', ascending=True)
+        latest_4q_balance = df_balance.iloc[:4].copy().sort_values('date', ascending=True)
+        for i, (idx_i, row_i) in enumerate(latest_4q_income.iterrows()):
+            row_b = latest_4q_balance.iloc[i]
+            q_label = row_i.get('quarter_label', f"{row_i['date'].year}-Q{row_i['date'].quarter}")
+            print(f"  {q_label}: 淨利 {row_i.get('netIncome', 0):,.0f} | 總資產 {row_b.get('TotalAssets', 0):,.0f}")
+    
+    print("\n📋 前4季數據：")
+    if df_income is not None and df_balance is not None and len(df_income) >= 8 and len(df_balance) >= 8:
+        prev_4q_income = df_income.iloc[4:8].copy().sort_values('date', ascending=True)
+        prev_4q_balance = df_balance.iloc[4:8].copy().sort_values('date', ascending=True)
+        for i, (idx_i, row_i) in enumerate(prev_4q_income.iterrows()):
+            row_b = prev_4q_balance.iloc[i]
+            q_label = row_i.get('quarter_label', f"{row_i['date'].year}-Q{row_i['date'].quarter}")
+            print(f"  {q_label}: 淨利 {row_i.get('netIncome', 0):,.0f} | 總資產 {row_b.get('TotalAssets', 0):,.0f}")
+    
     roa_now = safe_divide(ci.get('netIncome', 0), cb.get('TotalAssets', 1))
     roa_prev = safe_divide(pi.get('netIncome', 0), pb.get('TotalAssets', 1))
     
-    # 營運現金流
+    print(f"\n🔢 ROA 計算：")
+    print(f"  當期 ROA = 淨利(4季加總) / 總資產(4季平均)")
+    print(f"           = {ci.get('netIncome', 0):,.0f} / {cb.get('TotalAssets', 1):,.0f} = {roa_now:.4f}")
+    print(f"  前期 ROA = {pi.get('netIncome', 0):,.0f} / {pb.get('TotalAssets', 1):,.0f} = {roa_prev:.4f}")
+    print(f"  ✓ ROA 正值: {'是' if roa_now > 0 else '否'}")
+    print(f"  ✓ ROA 年增: {'是' if roa_now > roa_prev else '否'} (變化: {roa_now-roa_prev:+.4f})")
+    
+    # 2. 營運現金流品質
+    print("\n" + "="*80)
+    print("📊 指標 2: 營運現金流品質")
+    print("="*80)
+    
+    print("\n📋 最新4季數據：")
+    if df_income is not None and df_cash is not None and len(df_income) >= 4 and len(df_cash) >= 4:
+        latest_4q_income = df_income.iloc[:4].copy().sort_values('date', ascending=True)
+        latest_4q_cash = df_cash.iloc[:4].copy().sort_values('date', ascending=True)
+        for i, (idx_i, row_i) in enumerate(latest_4q_income.iterrows()):
+            row_c = latest_4q_cash.iloc[i]
+            q_label = row_i.get('quarter_label', f"{row_i['date'].year}-Q{row_i['date'].quarter}")
+            ocf = row_c.get('OCF', 0)
+            net = row_i.get('netIncome', 0)
+            quality = safe_divide(ocf, net)
+            print(f"  {q_label}: OCF {ocf:,.0f} | 淨利 {net:,.0f} | 品質比 {quality:.4f}")
+    
+    print("\n📋 前4季數據：")
+    if df_income is not None and df_cash is not None and len(df_income) >= 8 and len(df_cash) >= 8:
+        prev_4q_income = df_income.iloc[4:8].copy().sort_values('date', ascending=True)
+        prev_4q_cash = df_cash.iloc[4:8].copy().sort_values('date', ascending=True)
+        for i, (idx_i, row_i) in enumerate(prev_4q_income.iterrows()):
+            row_c = prev_4q_cash.iloc[i]
+            q_label = row_i.get('quarter_label', f"{row_i['date'].year}-Q{row_i['date'].quarter}")
+            ocf = row_c.get('OCF', 0)
+            net = row_i.get('netIncome', 0)
+            quality = safe_divide(ocf, net)
+            print(f"  {q_label}: OCF {ocf:,.0f} | 淨利 {net:,.0f} | 品質比 {quality:.4f}")
+    
     ocf_now = cc.get('OCF', 0)
     ocf_prev = pc.get('OCF', 0)
     net_income_now = ci.get('netIncome', 0)
     net_income_prev = pi.get('netIncome', 0)
     
-    # 流動比率
+    print(f"\n🔢 現金流品質計算：")
+    print(f"  當期: OCF {ocf_now:,.0f} | 淨利 {net_income_now:,.0f} | 品質比 {safe_divide(ocf_now, net_income_now):.4f}")
+    print(f"  前期: OCF {ocf_prev:,.0f} | 淨利 {net_income_prev:,.0f} | 品質比 {safe_divide(ocf_prev, net_income_prev):.4f}")
+    print(f"  ✓ OCF 正值: {'是' if ocf_now > 0 else '否'}")
+    print(f"  ✓ OCF > 淨利: {'是' if ocf_now > net_income_now else '否'}")
+    
+    # 3. 流動比率
+    print("\n" + "="*80)
+    print("📊 指標 3: 流動比率")
+    print("="*80)
+    
+    print("\n📋 最新4季數據：")
+    if df_balance is not None and len(df_balance) >= 4:
+        latest_4q = df_balance.iloc[:4].copy().sort_values('date', ascending=True)
+        for idx, row in latest_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            ca = row.get('CurrentAssets', 0)
+            cl = row.get('CurrentLiabilities', 1)
+            cr = safe_divide(ca, cl)
+            print(f"  {q_label}: 流動資產 {ca:,.0f} | 流動負債 {cl:,.0f} | 流動比率 {cr:.2f}")
+    
+    print("\n📋 前4季數據：")
+    if df_balance is not None and len(df_balance) >= 8:
+        prev_4q = df_balance.iloc[4:8].copy().sort_values('date', ascending=True)
+        for idx, row in prev_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            ca = row.get('CurrentAssets', 0)
+            cl = row.get('CurrentLiabilities', 1)
+            cr = safe_divide(ca, cl)
+            print(f"  {q_label}: 流動資產 {ca:,.0f} | 流動負債 {cl:,.0f} | 流動比率 {cr:.2f}")
+    
     ca_now = cb.get('CurrentAssets', 0)
     ca_prev = pb.get('CurrentAssets', 0)
     cl_now = cb.get('CurrentLiabilities', 1)
@@ -894,17 +1851,115 @@ def calculate_piotroski_fscore(df_income: pd.DataFrame, df_balance: pd.DataFrame
     cr_now = safe_divide(ca_now, cl_now)
     cr_prev = safe_divide(ca_prev, cl_prev)
     
-    # 長期負債比率
+    print(f"\n🔢 流動比率計算（平均）：")
+    print(f"  當期 = {ca_now:,.0f} / {cl_now:,.0f} = {cr_now:.2f}")
+    print(f"  前期 = {ca_prev:,.0f} / {cl_prev:,.0f} = {cr_prev:.2f}")
+    print(f"  ✓ 流動比率改善: {'是' if cr_now > cr_prev else '否'} (變化: {cr_now-cr_prev:+.2f})")
+    
+    # 4. 長期負債比率
+    print("\n" + "="*80)
+    print("📊 指標 4: 長期負債比率")
+    print("="*80)
+    
+    print("\n📋 最新4季數據：")
+    if df_balance is not None and len(df_balance) >= 4:
+        latest_4q = df_balance.iloc[:4].copy().sort_values('date', ascending=True)
+        for idx, row in latest_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            ltd = row.get('longTermDebt', 0)
+            ta = row.get('TotalAssets', 1)
+            ratio = safe_divide(ltd, ta)
+            print(f"  {q_label}: 長期負債 {ltd:,.0f} | 總資產 {ta:,.0f} | 比率 {ratio:.4f}")
+    
+    print("\n📋 前4季數據：")
+    if df_balance is not None and len(df_balance) >= 8:
+        prev_4q = df_balance.iloc[4:8].copy().sort_values('date', ascending=True)
+        for idx, row in prev_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            ltd = row.get('longTermDebt', 0)
+            ta = row.get('TotalAssets', 1)
+            ratio = safe_divide(ltd, ta)
+            print(f"  {q_label}: 長期負債 {ltd:,.0f} | 總資產 {ta:,.0f} | 比率 {ratio:.4f}")
+    
     ltd_now = cb.get('longTermDebt', 0)
     ltd_prev = pb.get('longTermDebt', 0)
     ltd_now_ratio = safe_divide(ltd_now, cb.get('TotalAssets', 1))
     ltd_prev_ratio = safe_divide(ltd_prev, pb.get('TotalAssets', 1))
     
-    # 營運效率
+    print(f"\n🔢 長期負債比率計算（平均）：")
+    print(f"  當期 = {ltd_now:,.0f} / {cb.get('TotalAssets', 1):,.0f} = {ltd_now_ratio:.4f}")
+    print(f"  前期 = {ltd_prev:,.0f} / {pb.get('TotalAssets', 1):,.0f} = {ltd_prev_ratio:.4f}")
+    print(f"  ✓ 長期負債比率改善: {'是' if ltd_now_ratio < ltd_prev_ratio else '否'} (變化: {ltd_now_ratio-ltd_prev_ratio:+.4f})")
+    
+    # 5. 毛利率
+    print("\n" + "="*80)
+    print("📊 指標 5: 毛利率")
+    print("="*80)
+    
+    print("\n📋 最新4季數據：")
+    if df_income is not None and len(df_income) >= 4:
+        latest_4q = df_income.iloc[:4].copy().sort_values('date', ascending=True)
+        for idx, row in latest_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            gp = row.get('grossProfit', 0)
+            rev = row.get('revenue', 1)
+            gpm = safe_divide(gp, rev)
+            print(f"  {q_label}: 毛利 {gp:,.0f} | 營收 {rev:,.0f} | 毛利率 {gpm:.4f} ({gpm*100:.2f}%)")
+    
+    print("\n📋 前4季數據：")
+    if df_income is not None and len(df_income) >= 8:
+        prev_4q = df_income.iloc[4:8].copy().sort_values('date', ascending=True)
+        for idx, row in prev_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            gp = row.get('grossProfit', 0)
+            rev = row.get('revenue', 1)
+            gpm = safe_divide(gp, rev)
+            print(f"  {q_label}: 毛利 {gp:,.0f} | 營收 {rev:,.0f} | 毛利率 {gpm:.4f} ({gpm*100:.2f}%)")
+    
     gpm_now = safe_divide(ci.get('grossProfit', 0), ci.get('revenue', 1))
     gpm_prev = safe_divide(pi.get('grossProfit', 0), pi.get('revenue', 1))
+    
+    print(f"\n🔢 毛利率計算（年度）：")
+    print(f"  當期 = {ci.get('grossProfit', 0):,.0f} / {ci.get('revenue', 1):,.0f} = {gpm_now:.4f} ({gpm_now*100:.2f}%)")
+    print(f"  前期 = {pi.get('grossProfit', 0):,.0f} / {pi.get('revenue', 1):,.0f} = {gpm_prev:.4f} ({gpm_prev*100:.2f}%)")
+    print(f"  ✓ 毛利率改善: {'是' if gpm_now > gpm_prev else '否'} (變化: {(gpm_now-gpm_prev)*100:+.2f}個百分點)")
+    
+    # 6. 資產周轉率
+    print("\n" + "="*80)
+    print("📊 指標 6: 資產周轉率")
+    print("="*80)
+    
+    print("\n📋 最新4季數據：")
+    if df_income is not None and df_balance is not None and len(df_income) >= 4 and len(df_balance) >= 4:
+        latest_4q_income = df_income.iloc[:4].copy().sort_values('date', ascending=True)
+        latest_4q_balance = df_balance.iloc[:4].copy().sort_values('date', ascending=True)
+        for i, (idx_i, row_i) in enumerate(latest_4q_income.iterrows()):
+            row_b = latest_4q_balance.iloc[i]
+            q_label = row_i.get('quarter_label', f"{row_i['date'].year}-Q{row_i['date'].quarter}")
+            rev = row_i.get('revenue', 0)
+            ta = row_b.get('TotalAssets', 1)
+            ato = safe_divide(rev, ta)
+            print(f"  {q_label}: 營收 {rev:,.0f} | 總資產 {ta:,.0f} | 週轉率 {ato:.4f}")
+    
+    print("\n📋 前4季數據：")
+    if df_income is not None and df_balance is not None and len(df_income) >= 8 and len(df_balance) >= 8:
+        prev_4q_income = df_income.iloc[4:8].copy().sort_values('date', ascending=True)
+        prev_4q_balance = df_balance.iloc[4:8].copy().sort_values('date', ascending=True)
+        for i, (idx_i, row_i) in enumerate(prev_4q_income.iterrows()):
+            row_b = prev_4q_balance.iloc[i]
+            q_label = row_i.get('quarter_label', f"{row_i['date'].year}-Q{row_i['date'].quarter}")
+            rev = row_i.get('revenue', 0)
+            ta = row_b.get('TotalAssets', 1)
+            ato = safe_divide(rev, ta)
+            print(f"  {q_label}: 營收 {rev:,.0f} | 總資產 {ta:,.0f} | 週轉率 {ato:.4f}")
+    
     ato_now = safe_divide(ci.get('revenue', 0), cb.get('TotalAssets', 1))
     ato_prev = safe_divide(pi.get('revenue', 0), pb.get('TotalAssets', 1))
+    
+    print(f"\n🔢 資產周轉率計算（年度）：")
+    print(f"  當期 = {ci.get('revenue', 0):,.0f} / {cb.get('TotalAssets', 1):,.0f} = {ato_now:.4f}")
+    print(f"  前期 = {pi.get('revenue', 0):,.0f} / {pb.get('TotalAssets', 1):,.0f} = {ato_prev:.4f}")
+    print(f"  ✓ 資產周轉率改善: {'是' if ato_now > ato_prev else '否'} (變化: {ato_now-ato_prev:+.4f})")
     
     # ===== 組裝評分 =====
     score = {'profitability_scores': [], 'leverage_scores': [], 'efficiency_scores': [], 'total_score': 0}
@@ -929,10 +1984,10 @@ def calculate_piotroski_fscore(df_income: pd.DataFrame, df_balance: pd.DataFrame
          'status': '✓' if ltd_now_ratio < ltd_prev_ratio else '✗'},
         {'name': '流動比率改善', 'score': int(cr_now > cr_prev), 'current': f"{cr_now:.2f}", 
          'previous': f"{cr_prev:.2f}", 'status': '✓' if cr_now > cr_prev else '✗'},
-        {'name': '股份未稀釋', 'score': int(shares_now <= shares_prev) if (shares_now and shares_prev) else 0, 
-         'current': f"{shares_now:,.0f}" if shares_now else "N/A", 
-         'previous': f"{shares_prev:,.0f}" if shares_prev else "N/A", 
-         'status': '✓' if (shares_now and shares_prev and shares_now <= shares_prev) else '✗'},
+        {'name': '股份未稀釋', 'score': int(shares_now <= shares_prev) if (shares_now and shares_prev and not np.isnan(shares_now) and not np.isnan(shares_prev)) else 0, 
+         'current': f"{shares_now:,.0f}" if shares_now and not np.isnan(shares_now) else "N/A", 
+         'previous': f"{shares_prev:,.0f}" if shares_prev and not np.isnan(shares_prev) else "N/A", 
+         'status': '✓' if (shares_now and shares_prev and not np.isnan(shares_now) and not np.isnan(shares_prev) and shares_now <= shares_prev) else '✗'},
     ]
     
     # 3) 營運效率（2項）
@@ -950,6 +2005,10 @@ def calculate_piotroski_fscore(df_income: pd.DataFrame, df_balance: pd.DataFrame
         for item in group
     )
     
+    print("\n" + "="*80)
+    print(f"🎯 F-Score 總分: {score['total_score']}/9")
+    print("="*80 + "\n")
+    
     return score
 
 
@@ -957,14 +2016,47 @@ def calculate_altman_zscore(df_income: pd.DataFrame, df_balance: pd.DataFrame, m
     """
     計算 Altman Z-Score（台股版）
     """
+    print("\n" + "="*80)
+    print("📊 Altman Z-Score 計算過程")
+    print("="*80)
+    
+    # ⚠️ 確保數據按日期降序排列（最新的在前）
+    if df_income is not None and not df_income.empty:
+        df_income = df_income.sort_values('date', ascending=False).reset_index(drop=True)
+    if df_balance is not None and not df_balance.empty:
+        df_balance = df_balance.sort_values('date', ascending=False).reset_index(drop=True)
+    
     income_annual = aggregate_quarterly_to_annual(df_income)
     balance_annual = aggregate_quarterly_to_annual(df_balance)
     
     if not all([income_annual, balance_annual, market_cap]):
         return None
     
+    # 打印原始季度數據
+    print("\n📅 最新4季資產負債數據（從早到晚顯示）：")
+    if df_balance is not None and not df_balance.empty and len(df_balance) >= 4:
+        latest_4q = df_balance.iloc[:4].copy()
+        latest_4q = latest_4q.sort_values('date', ascending=True)
+        for idx, row in latest_4q.iterrows():
+            ca = row.get('CurrentAssets', 0)
+            cl = row.get('CurrentLiabilities', 0)
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 流動資產: {ca:,.0f} | 流動負債: {cl:,.0f} | 營運資金: {ca-cl:,.0f}")
+    
+    print("\n📅 前4季資產負債數據（從早到晚顯示）：")
+    if df_balance is not None and len(df_balance) >= 8:
+        prev_4q = df_balance.iloc[4:8].copy()
+        prev_4q = prev_4q.sort_values('date', ascending=True)
+        for idx, row in prev_4q.iterrows():
+            ca = row.get('CurrentAssets', 0)
+            cl = row.get('CurrentLiabilities', 0)
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 流動資產: {ca:,.0f} | 流動負債: {cl:,.0f} | 營運資金: {ca-cl:,.0f}")
+    
     ci = income_annual['current']
     cb = balance_annual['current']
+    
+    print(f"\n💰 市值: {market_cap:,.0f}")
     
     # 取得必要數據
     ca = cb.get('CurrentAssets', 0)
@@ -977,7 +2069,17 @@ def calculate_altman_zscore(df_income: pd.DataFrame, df_balance: pd.DataFrame, m
     rev = ci.get('revenue', 0)
     
     wc = ca - cl
-    ebit = oi + ie  # 直接相加，不使用 abs()
+    ebit = oi + ie
+    
+    print(f"\n📊 基礎數據：")
+    print(f"  營運資金(WC) = 流動資產 - 流動負債 = {ca:,.0f} - {cl:,.0f} = {wc:,.0f}")
+    print(f"  總資產(TA) = {ta:,.0f}")
+    print(f"  保留盈餘(RE) = {re:,.0f}")
+    print(f"  營業利益(OI) = {oi:,.0f}")
+    print(f"  估計利息費用(IE) = {ie:,.0f}")
+    print(f"  EBIT = OI + IE = {oi:,.0f} + {ie:,.0f} = {ebit:,.0f}")
+    print(f"  總負債(TL) = {tl:,.0f}")
+    print(f"  營收(Rev) = {rev:,.0f}")
     
     # 計算五個組成要素
     A = safe_divide(wc, ta) * 1.2
@@ -986,7 +2088,16 @@ def calculate_altman_zscore(df_income: pd.DataFrame, df_balance: pd.DataFrame, m
     D = safe_divide(market_cap, tl) * 0.6
     E = safe_divide(rev, ta) * 1.0
     
+    print(f"\n🔢 Z-Score 組成要素：")
+    print(f"  A = (WC/TA) × 1.2 = ({wc:,.0f}/{ta:,.0f}) × 1.2 = {A:.4f}")
+    print(f"  B = (RE/TA) × 1.4 = ({re:,.0f}/{ta:,.0f}) × 1.4 = {B:.4f}")
+    print(f"  C = (EBIT/TA) × 3.3 = ({ebit:,.0f}/{ta:,.0f}) × 3.3 = {C:.4f}")
+    print(f"  D = (MC/TL) × 0.6 = ({market_cap:,.0f}/{tl:,.0f}) × 0.6 = {D:.4f}")
+    print(f"  E = (Rev/TA) × 1.0 = ({rev:,.0f}/{ta:,.0f}) × 1.0 = {E:.4f}")
+    
     z_score = A + B + C + D + E
+    
+    print(f"\n🎯 Z-Score = A + B + C + D + E = {A:.4f} + {B:.4f} + {C:.4f} + {D:.4f} + {E:.4f} = {z_score:.4f}")
     
     # 風險等級
     if z_score > 2.99:
@@ -995,6 +2106,9 @@ def calculate_altman_zscore(df_income: pd.DataFrame, df_balance: pd.DataFrame, m
         risk_level, risk_emoji = "灰色區域", "😐"
     else:
         risk_level, risk_emoji = "危險區域", "😰"
+    
+    print(f"📈 風險等級: {risk_level} {risk_emoji}")
+    print("="*80 + "\n")
     
     return {
         'z_score': z_score,
@@ -1018,10 +2132,19 @@ def calculate_dupont_analysis(df_income: pd.DataFrame, df_balance: pd.DataFrame)
     杜邦分析（台股版）
     分析最近3年（12季）的ROE三因子
     """
+    print("\n" + "="*80)
+    print("📊 杜邦分析計算過程")
+    print("="*80)
+    
     if df_income is None or df_income.empty or df_balance is None or df_balance.empty:
         return None
     
+    # ⚠️ 確保數據按日期降序排列（最新的在前）
+    df_income = df_income.sort_values('date', ascending=False).reset_index(drop=True)
+    df_balance = df_balance.sort_values('date', ascending=False).reset_index(drop=True)
+    
     if len(df_income) < 12 or len(df_balance) < 12:
+        print(f"⚠️ 數據不足：損益表 {len(df_income)} 季，資產負債表 {len(df_balance)} 季（需要至少12季）")
         return None
     
     results = []
@@ -1030,6 +2153,21 @@ def calculate_dupont_analysis(df_income: pd.DataFrame, df_balance: pd.DataFrame)
     for year_idx in range(3):
         start_idx = year_idx * 4
         end_idx = start_idx + 4
+        
+        print(f"\n📅 第 {year_idx + 1} 年分析（索引 {start_idx}-{end_idx-1}，即 t{start_idx}-t{end_idx-1}）:")
+        
+        # 打印該年度4季數據（從早到晚）
+        print(f"  損益表 4季數據（從早到晚顯示）：")
+        df_sorted = df_income.iloc[start_idx:end_idx].copy().sort_values('date', ascending=True)
+        for idx, row in df_sorted.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"    {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 營收: {row.get('revenue', 0):,.0f} | 淨利: {row.get('netIncome', 0):,.0f}")
+        
+        print(f"  資產負債表 4季數據（從早到晚顯示）：")
+        df_sorted = df_balance.iloc[start_idx:end_idx].copy().sort_values('date', ascending=True)
+        for idx, row in df_sorted.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"    {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 總資產: {row.get('TotalAssets', 0):,.0f} | 權益: {row.get('Equity', 0):,.0f}")
         
         income_data = aggregate_quarterly_to_annual(df_income.iloc[start_idx:end_idx + 4], periods_latest=4, periods_previous=4)
         balance_data = aggregate_quarterly_to_annual(df_balance.iloc[start_idx:end_idx + 4], periods_latest=4, periods_previous=4)
@@ -1048,6 +2186,20 @@ def calculate_dupont_analysis(df_income: pd.DataFrame, df_balance: pd.DataFrame)
         nm = safe_divide(net, rev)  # 淨利率
         at = safe_divide(rev, ta)   # 資產週轉率
         em = safe_divide(ta, eq)    # 權益乘數
+        roe = safe_divide(net, eq)
+        
+        print(f"\n  💰 年度合計/平均：")
+        print(f"    淨利: {net:,.0f}")
+        print(f"    營收: {rev:,.0f}")
+        print(f"    總資產(平均): {ta:,.0f}")
+        print(f"    權益(平均): {eq:,.0f}")
+        
+        print(f"\n  🔢 ROE三因子：")
+        print(f"    淨利率(NM) = 淨利/營收 = {net:,.0f}/{rev:,.0f} = {nm:.4f}")
+        print(f"    資產週轉率(AT) = 營收/總資產 = {rev:,.0f}/{ta:,.0f} = {at:.4f}")
+        print(f"    權益乘數(EM) = 總資產/權益 = {ta:,.0f}/{eq:,.0f} = {em:.4f}")
+        print(f"    ROE = NM × AT × EM = {nm:.4f} × {at:.4f} × {em:.4f} = {nm*at*em:.4f}")
+        print(f"    直接ROE = 淨利/權益 = {net:,.0f}/{eq:,.0f} = {roe:.4f}")
         
         # 取最新一季的日期作為年度標記
         date_label = df_income.iloc[start_idx].get('date', '')
@@ -1057,7 +2209,7 @@ def calculate_dupont_analysis(df_income: pd.DataFrame, df_balance: pd.DataFrame)
             'net_margin': nm,
             'asset_turnover': at,
             'equity_multiplier': em,
-            'direct_roe': safe_divide(net, eq)
+            'direct_roe': roe
         })
     
     # 計算變化
@@ -1069,6 +2221,14 @@ def calculate_dupont_analysis(df_income: pd.DataFrame, df_balance: pd.DataFrame)
             'equity_multiplier_change': results[0]['equity_multiplier'] - results[1]['equity_multiplier'],
             'roe_change': results[0]['direct_roe'] - results[1]['direct_roe'],
         }
+        
+        print(f"\n📈 年度變化（最新年 vs 前一年）：")
+        print(f"  淨利率變化: {changes['net_margin_change']:+.4f}")
+        print(f"  資產週轉率變化: {changes['asset_turnover_change']:+.4f}")
+        print(f"  權益乘數變化: {changes['equity_multiplier_change']:+.4f}")
+        print(f"  ROE變化: {changes['roe_change']:+.4f}")
+    
+    print("="*80 + "\n")
     
     return {'yearly_analysis': results, 'changes': changes}
 
@@ -1077,11 +2237,60 @@ def calculate_cashflow_analysis(df_income: pd.DataFrame, df_cash: pd.DataFrame) 
     """
     現金流分析（台股版）
     """
+    print("\n" + "="*80)
+    print("📊 現金流分析計算過程")
+    print("="*80)
+    
+    # ⚠️ 確保數據按日期降序排列（最新的在前）
+    if df_income is not None and not df_income.empty:
+        df_income = df_income.sort_values('date', ascending=False).reset_index(drop=True)
+    if df_cash is not None and not df_cash.empty:
+        df_cash = df_cash.sort_values('date', ascending=False).reset_index(drop=True)
+    
     income_annual = aggregate_quarterly_to_annual(df_income)
     cash_annual = aggregate_quarterly_to_annual(df_cash)
     
     if not all([income_annual, cash_annual]):
         return None
+    
+    # 打印原始季度數據（從早到晚）
+    print("\n📅 最新4季現金流數據（從早到晚顯示）：")
+    if df_cash is not None and not df_cash.empty and len(df_cash) >= 4:
+        latest_4q = df_cash.iloc[:4].copy()
+        latest_4q = latest_4q.sort_values('date', ascending=True)
+        for idx, row in latest_4q.iterrows():
+            ocf = row.get('OCF', 0)
+            capex = row.get('CapEx', 0)
+            fcf = row.get('FCF', 0)
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | OCF: {ocf:,.0f} | CapEx: {capex:,.0f} | FCF: {fcf:,.0f}")
+    
+    print("\n📅 前4季現金流數據（從早到晚顯示）：")
+    if df_cash is not None and len(df_cash) >= 8:
+        prev_4q = df_cash.iloc[4:8].copy()
+        prev_4q = prev_4q.sort_values('date', ascending=True)
+        for idx, row in prev_4q.iterrows():
+            ocf = row.get('OCF', 0)
+            capex = row.get('CapEx', 0)
+            fcf = row.get('FCF', 0)
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | OCF: {ocf:,.0f} | CapEx: {capex:,.0f} | FCF: {fcf:,.0f}")
+    
+    print("\n📅 最新4季淨利數據（從早到晚顯示）：")
+    if df_income is not None and not df_income.empty and len(df_income) >= 4:
+        latest_4q = df_income.iloc[:4].copy()
+        latest_4q = latest_4q.sort_values('date', ascending=True)
+        for idx, row in latest_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 淨利: {row.get('netIncome', 0):,.0f}")
+    
+    print("\n📅 前4季淨利數據（從早到晚顯示）：")
+    if df_income is not None and len(df_income) >= 8:
+        prev_4q = df_income.iloc[4:8].copy()
+        prev_4q = prev_4q.sort_values('date', ascending=True)
+        for idx, row in prev_4q.iterrows():
+            q_label = row.get('quarter_label', f"{row['date'].year}-Q{row['date'].quarter}")
+            print(f"  {q_label} ({row['date'].strftime('%Y-%m-%d')}) | 淨利: {row.get('netIncome', 0):,.0f}")
     
     ci = income_annual['current']
     cc = cash_annual['current']
@@ -1092,8 +2301,18 @@ def calculate_cashflow_analysis(df_income: pd.DataFrame, df_cash: pd.DataFrame) 
     net = ci.get('netIncome', 1)
     capex = cc.get('CapEx', 0)
     
+    print(f"\n💰 年度合計數據（4季加總）：")
+    print(f"  營運現金流(OCF): {ocf:,.0f}")
+    print(f"  投資現金流(CFI): {cfi:,.0f}")
+    print(f"  融資現金流(CFF): {cff:,.0f}")
+    print(f"  淨利: {net:,.0f}")
+    print(f"  資本支出(CapEx): {capex:,.0f}")
+    
     # 現金流品質比率
     ocf_quality = safe_divide(ocf, net)
+    
+    print(f"\n🔢 現金流品質比率：")
+    print(f"  OCF品質 = OCF/淨利 = {ocf:,.0f}/{net:,.0f} = {ocf_quality:.4f}")
     
     # 品質評估
     if ocf_quality >= 1.2:
@@ -1105,10 +2324,23 @@ def calculate_cashflow_analysis(df_income: pd.DataFrame, df_cash: pd.DataFrame) 
     else:
         q, emoji = "需關注", "😰"
     
+    print(f"  評估: {q} {emoji}")
+    
     # 自由現金流（使用絕對值確保 CapEx 為正）
     free_cashflow = ocf - abs(capex)
     
+    print(f"\n💵 自由現金流：")
+    print(f"  FCF = OCF - |CapEx| = {ocf:,.0f} - {abs(capex):,.0f} = {free_cashflow:,.0f}")
+    
     total_cf = ocf + cfi + cff
+    
+    print(f"\n📊 現金流結構：")
+    print(f"  營運現金流: {ocf:,.0f} ({safe_divide(ocf, total_cf)*100:.1f}%)" if total_cf != 0 else f"  營運現金流: {ocf:,.0f}")
+    print(f"  投資現金流: {cfi:,.0f} ({safe_divide(cfi, total_cf)*100:.1f}%)" if total_cf != 0 else f"  投資現金流: {cfi:,.0f}")
+    print(f"  融資現金流: {cff:,.0f} ({safe_divide(cff, total_cf)*100:.1f}%)" if total_cf != 0 else f"  融資現金流: {cff:,.0f}")
+    print(f"  總現金流: {total_cf:,.0f}")
+    
+    print("="*80 + "\n")
     
     return {
         'ocf_quality': ocf_quality,
@@ -1122,7 +2354,6 @@ def calculate_cashflow_analysis(df_income: pd.DataFrame, df_cash: pd.DataFrame) 
             'total': total_cf
         }
     }
-
 
 #%%
 # ==================== AI 資產負債表分析 ====================
@@ -1170,7 +2401,7 @@ def generate_bs_insights(symbol: str, df_balance: pd.DataFrame, openai_api_key: 
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.1,
             max_tokens=2500,
         )
         return resp.choices[0].message.content
@@ -1224,7 +2455,7 @@ def generate_is_insights(symbol: str, df_income: pd.DataFrame, openai_api_key: s
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.1,
             max_tokens=2500,
         )
         return resp.choices[0].message.content
@@ -1279,7 +2510,7 @@ def generate_cf_insights(symbol: str, df_cash: pd.DataFrame, openai_api_key: str
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.1,
             max_tokens=2500,
         )
         return resp.choices[0].message.content
@@ -1332,7 +2563,7 @@ def generate_core_metrics_insights(symbol: str, core: pd.DataFrame, openai_api_k
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.1,
             max_tokens=2500,
         )
         return resp.choices[0].message.content
@@ -1385,8 +2616,8 @@ def generate_ai_insights(symbol, stock_data, openai_api_key):
             7 波動
             8 近期是否有影響到市場的消息面，原因解說
             9 技術面趨勢結語
-            10 上下游可以關注的個股，產業關係（列出個股台股代號，並列出該個股的上下游相關美股代號、原因）
-            11 同業、競爭對手可以關注的個股，優劣勢比較（列出個股台股代號，並列出該個股的上下游相關美股代號、原因）
+            10 上下游可以關注的個股（列出台股、美股代號、關注原因、優劣勢比較)
+            11 同業、競爭對手可以關注的個股（列出台股、美股代號、關注原因、優劣勢比較)
             12 分別列出市面上最新不同機構，對公司的估值，機構名稱、機構對此公司評價年月、目標價、評價、需注意點、產業前景(今日為{today_date}，不考慮財報，上網搜集高盛、摩根士丹利、摩根、瑞士信貸等最新評價)
         """
         
@@ -1396,7 +2627,7 @@ def generate_ai_insights(symbol, stock_data, openai_api_key):
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.7,
+            temperature=0.1,
             max_tokens=2000,
         )
         return response.choices[0].message.content
@@ -1524,7 +2755,7 @@ Z-Score: {_fmt((zscore or {}).get('z_score'), 2)}
         model="gpt-4o-mini",
         messages=[{"role": "system", "content": system_message},
                   {"role": "user", "content": user_message}],
-        temperature=0.7,
+        temperature=0.1,
         max_tokens=5000
     )
     return response.choices[0].message.content

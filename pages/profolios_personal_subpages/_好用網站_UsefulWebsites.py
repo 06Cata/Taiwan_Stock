@@ -36,6 +36,8 @@ def main():
             "https://goodinfo.tw/tw/StockList.asp?MARKET_CAT=%E7%86%B1%E9%96%80%E6%8E%92%E8%A1%8C&INDUSTRY_CAT=%E4%B8%89%E5%A4%A7%E6%B3%95%E4%BA%BA%E7%B4%AF%E8%A8%88%E8%B2%B7%E8%B6%85%E5%BC%B5%E6%95%B8+%E2%80%93+%E7%95%B6%E6%97%A5%40%40%E4%B8%89%E5%A4%A7%E6%B3%95%E4%BA%BA%E7%B4%AF%E8%A8%88%E8%B2%B7%E8%B6%85%40%40%E4%B8%89%E5%A4%A7%E6%B3%95%E4%BA%BA%E8%B2%B7%E8%B6%85%E5%BC%B5%E6%95%B8+%E2%80%93+%E7%95%B6%E6%97%A5",
             "籌碼、排行與多維度指標"),
             ("證交所ETF專區", "https://www.twse.com.tw/zh/products/securities/etf/products/list.html", "ETF資料查詢"),
+            ("股票熱力圖", "https://news.ustv.com.tw/heatmap", "股票熱力圖"),
+            ("市場熱門族群和概念股", "https://statementdog.com/market-trend", "市場熱門族群熱力圖"),
         ],
         "US STOCK": [
             ("SEC (U.S. Securities and Exchange Commission)", "https://www.sec.gov/", "10-K/10-Q/8-K 官方查詢"),
