@@ -103,7 +103,7 @@ def download_sqlite_from_github(url):
 
 
 def main():
-    st.subheader("台股產業類別查詢 TW Stock Industry Lookup - On the way")
+    st.subheader("台股產業類別查詢 TW Stock Industry Lookup")
     st.write("")
     
     # 下載資料庫
