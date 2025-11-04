@@ -29,7 +29,7 @@ def main():
     st.subheader("台股AI智能分析 TW Stock AI Insight")
     st.write("""
         請自行申請 **[FinMind API Key](https://finmindtrade.com/)** 與 **[OpenAI API Key](https://openai.com/api/)**，系統會根據 **技術面** 與 **基本面** 資料，
-        生成由 AI 撰寫的分析報告，以上觀點僅供參考，並不構成任何交易建議或推薦
+        生成由 AI 撰寫的分析報告，[參考檔案](https://drive.google.com/drive/folders/1E4BOclNnGn0_ly3a1opP9V6Oku3snT8t?usp=sharing)，以上觀點僅供參考，並不構成任何交易建議或推薦
     """)
 
     # ==================== 頂部輸入表單 ====================
@@ -443,6 +443,7 @@ def main():
                 industries_str = "、".join(industry_list)
                 st.write(f"**相關產業：** {industries_str}")
 
+            
             st.divider()
             
             # ===== 四階段財報分析 =====
