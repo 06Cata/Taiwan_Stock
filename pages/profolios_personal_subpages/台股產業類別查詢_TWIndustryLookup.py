@@ -104,28 +104,30 @@ def download_sqlite_from_github(url):
 
 def main():
     st.subheader("台股產業類別查詢 TW Stock Industry Lookup - On the way")
-
+    st.write("")
+    
     # 下載資料庫
-    industry_db_path = 'https://github.com/06Cata/Taiwan_Stock/raw/main/industry.sqlite3'
+    # industry_db_path = 'https://github.com/06Cata/Taiwan_Stock/raw/main/industry.sqlite3'
+    industry_db_path = 'https://github.com/06Cata/Taiwan_Stock/raw/main/industry_category.sqlite3'
     industry_db_path_download = download_sqlite_from_github(industry_db_path)
-    industry_table = 'industry'
+    # industry_table = 'industry'
+    industry_table = 'industry_category'
 
     with sqlite3.connect(industry_db_path_download) as conn:
-        df = pd.read_sql(f"SELECT 公司代號, 公司名稱, 上市櫃, 產業類別提取 FROM {industry_table}", conn)
+        # df = pd.read_sql(f"SELECT 公司代號, 公司名稱, 上市櫃, 產業類別提取 FROM {industry_table}", conn)
+        df = pd.read_sql(f"SELECT * FROM {industry_table}", conn)
 
-    # 🔍 新增公司代號搜尋框
-    st.write("#### 搜尋公司代號")
-    search_code = st.text_input("請輸入公司代號 (Company Code)，按 Enter 送出")
-
+    # 公司代號搜尋框
+    search_code = st.text_input("請輸入公司代號 (Company Code)，按 Enter 送出", value='2330')
+    
     if search_code:
         df_search = df[df['公司代號'].astype(str).str.contains(search_code)]
         if len(df_search) > 0:
             st.success(f"找到 {len(df_search)} 筆結果：")
             st.dataframe(df_search.reset_index(drop=True))
         else:
-            st.warning("查無符合的公司代號。")
-
-        st.write("---")  # 分隔線
+            st.warning("查無符合的公司代號")  
+    st.divider()
 
     # 產業分類查詢
     all_industry = df['產業類別提取'].dropna().unique()
