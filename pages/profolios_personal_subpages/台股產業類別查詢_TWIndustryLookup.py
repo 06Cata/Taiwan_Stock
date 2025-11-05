@@ -130,16 +130,24 @@ def main():
     st.divider()
 
     # 產業分類查詢
-    all_industry = df['產業類別提取'].dropna().unique()
+    all_industry = df['產業類別提取'].dropna().unique().tolist() 
+    all_industry.insert(0, "全部") 
+    
     industry_selected = st.selectbox(
-        "請選擇產業類別，或依照近期熱門題材查看\n\n"
-        "Please select an industry category, or browse by recent trending topics.",
+        "請選擇產業類別，或依照近期熱門題材查看。若合理本益比過高，可能是 EPS 為負值，請留意風險\n\n"
+        "Please select an industry category, or browse by recent trending topics. A high fair P/E ratio may indicate negative EPS — be cautious.",
         all_industry
     )
     st.write(" ")
 
-    df_filtered = df[df['產業類別提取'] == industry_selected]
+    # df_filtered = df[df['產業類別提取'] == industry_selected]
+    if industry_selected == "全部":
+            df_filtered = df.copy()
+    else:
+        df_filtered = df[df['產業類別提取'] == industry_selected]
 
+    
+    
     st.write(f"#### {industry_selected}（上市）")
     st.dataframe(df_filtered[df_filtered['上市櫃'] == '上市'].reset_index(drop=True))
     st.write(" ")
